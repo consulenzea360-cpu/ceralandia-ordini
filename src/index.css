@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Altezza piena per tutta l'app */
+html, body, #root {
+  height: 100%;
+}
+
+/* NAVBAR STYLE */
+.navbar {
+  @apply bg-black text-white flex items-center justify-between px-4 h-16 shadow;
+}
+
+/* Pulsanti standard grigio scuro */
+.btn-dark {
+  @apply bg-gray-800 text-white px-4 py-2 rounded shadow hover:bg-gray-700;
+}
+
+/* Pulsante rosso logout */
+.btn-logout {
+  @apply bg-red-600 text-white px-4 py-2 rounded shadow hover:bg-red-700;
+}
+
+/* Cards e contenitori */
+.card {
+  @apply bg-white p-4 rounded shadow;
+}
+
+/* Tabelle statistiche */
+.stats-box {
+  @apply border rounded p-4 bg-white shadow;
+}
+
+/* Pulsanti piccoli */
+.btn-small {
+  @apply px-2 py-1 text-sm rounded border;
+}
+
+/* Massima larghezza contenuto */
+.container-max {
+  max-width: 900px;
+  margin: auto;
+}
