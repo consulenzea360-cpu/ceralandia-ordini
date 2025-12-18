@@ -4,7 +4,7 @@ import Navbar from "../components/Navbar";
 import { Link } from "react-router-dom";
 
 export default function Home({ user, onLogout }) {
-  return (
+  return (<div className="main-content">
     <div>
       <Navbar onLogout={onLogout} />
 
@@ -56,6 +56,6 @@ export default function Home({ user, onLogout }) {
 
         </div>
       </div>
-    </div>
+    </div></div>
   );
 }

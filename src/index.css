@@ -42,3 +42,13 @@ html, body, #root {
   max-width: 900px;
   margin: auto;
 }
+/* Spazio sotto la navbar su mobile */
+.main-content {
+  padding-top: 4rem;
+}
+
+@media (max-width: 640px) {
+  .main-content {
+    padding-top: 5rem;
+  }
+}
