@@ -1,21 +1,20 @@
+// FILE: src/components/OrderList.jsx
 import React, { useMemo, useState } from "react";
 import StatusLed from "./StatusLed";
 
 export default function OrderList({
   orders = [],
   onEdit,
-  onView,
+  onChangeStatus,
   onDelete,
-  isAdmin = false,
-  onChangeStatus
+  isAdmin = false
 }) {
   const [search, setSearch] = useState("");
 
   // 🔎 FILTRO COME DeliveredList
-  const filteredOrders = useMemo(() => {
+  const filtered = useMemo(() => {
     const t = search.trim().toLowerCase();
     if (!t) return orders;
-
     return orders.filter(
       (o) =>
         (o.cliente || "").toLowerCase().includes(t) ||
@@ -23,13 +22,12 @@ export default function OrderList({
     );
   }, [orders, search]);
 
-  if (!orders.length) {
+  if (!orders.length)
     return (
       <div className="text-center text-gray-500 py-6">
         Nessun ordine presente.
       </div>
     );
-  }
 
   return (
     <div>
@@ -49,9 +47,9 @@ export default function OrderList({
         </button>
       </div>
 
-      {/* LISTA ORDINI */}
+      {/* 📋 LISTA ORDINI */}
       <div className="space-y-3">
-        {filteredOrders.map((o) => (
+        {filtered.map((o) => (
           <div
             key={o.id}
             className="p-3 border rounded flex items-center justify-between bg-white shadow-sm"
@@ -71,17 +69,6 @@ export default function OrderList({
             <div className="flex items-center gap-3">
               <StatusLed status={o.stato} />
 
-              {/* VISUALIZZA */}
-              {onView && (
-                <button
-                  onClick={() => onView(o)}
-                  className="px-2 py-1 border rounded bg-white hover:bg-gray-100"
-                >
-                  👁️
-                </button>
-              )}
-
-              {/* CAMBIO STATO */}
               {onChangeStatus && (
                 <select
                   className="border p-1 rounded"
@@ -97,7 +84,6 @@ export default function OrderList({
                 </select>
               )}
 
-              {/* MODIFICA */}
               {onEdit && (
                 <button
                   onClick={() => onEdit(o)}
@@ -107,7 +93,6 @@ export default function OrderList({
                 </button>
               )}
 
-              {/* ELIMINA — SOLO ADMIN */}
               {isAdmin && onDelete && (
                 <button
                   onClick={() => onDelete(o.id)}
