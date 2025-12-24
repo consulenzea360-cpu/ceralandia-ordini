@@ -1,33 +1,62 @@
-// FILE: src/components/OrderList.jsx
-import React from "react";
+import React, { useMemo, useState } from "react";
 import StatusLed from "./StatusLed";
 
 export default function OrderList({
   orders = [],
   onEdit,
   onView,
-  onChangeStatus,
   onDelete,
-  isAdmin = false
+  isAdmin = false,
+  onChangeStatus
 }) {
-  if (!orders.length)
+  const [search, setSearch] = useState("");
+
+  // 🔎 FILTRO COME DeliveredList
+  const filteredOrders = useMemo(() => {
+    const t = search.trim().toLowerCase();
+    if (!t) return orders;
+
+    return orders.filter(
+      (o) =>
+        (o.cliente || "").toLowerCase().includes(t) ||
+        (o.telefono || "").toLowerCase().includes(t)
+    );
+  }, [orders, search]);
+
+  if (!orders.length) {
     return (
       <div className="text-center text-gray-500 py-6">
         Nessun ordine presente.
       </div>
     );
+  }
 
   return (
-    <div className="space-y-3">
-      {orders.map((o) => {
-        const isDelivered = o.stato === "consegnato";
+    <div>
+      {/* 🔍 SEARCH BAR */}
+      <div className="mb-4 flex gap-2">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Cerca per nome o telefono"
+          className="flex-1 p-2 border rounded"
+        />
+        <button
+          onClick={() => setSearch("")}
+          className="px-3 py-2 border rounded"
+        >
+          Reset
+        </button>
+      </div>
 
-        return (
+      {/* LISTA ORDINI */}
+      <div className="space-y-3">
+        {filteredOrders.map((o) => (
           <div
             key={o.id}
             className="p-3 border rounded flex items-center justify-between bg-white shadow-sm"
           >
-            {/* Info Ordine */}
+            {/* INFO */}
             <div>
               <div className="font-medium">{o.cliente || "-"}</div>
               <div className="text-sm text-gray-600">
@@ -38,11 +67,11 @@ export default function OrderList({
               </div>
             </div>
 
-            {/* Azioni */}
+            {/* AZIONI */}
             <div className="flex items-center gap-3">
               <StatusLed status={o.stato} />
 
-              {/* Visualizza */}
+              {/* VISUALIZZA */}
               {onView && (
                 <button
                   onClick={() => onView(o)}
@@ -52,12 +81,14 @@ export default function OrderList({
                 </button>
               )}
 
-              {/* Cambia stato (solo se NON consegnato) */}
-              {!isDelivered && onChangeStatus && (
+              {/* CAMBIO STATO */}
+              {onChangeStatus && (
                 <select
                   className="border p-1 rounded"
                   value={o.stato}
-                  onChange={(e) => onChangeStatus(o.id, e.target.value)}
+                  onChange={(e) =>
+                    onChangeStatus(o.id, e.target.value)
+                  }
                 >
                   <option value="da_prendere">Da prendere</option>
                   <option value="in_lavorazione">In lavorazione</option>
@@ -66,21 +97,17 @@ export default function OrderList({
                 </select>
               )}
 
-              {/* Modifica 
-                  - Utente locale: solo se NON è consegnato
-                  - Admin: sempre possibile
-               */}
-              {onEdit &&
-                ((isAdmin || !isDelivered) && (
-                  <button
-                    onClick={() => onEdit(o)}
-                    className="px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200"
-                  >
-                    ✏️
-                  </button>
-                ))}
+              {/* MODIFICA */}
+              {onEdit && (
+                <button
+                  onClick={() => onEdit(o)}
+                  className="px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200"
+                >
+                  ✏️
+                </button>
+              )}
 
-              {/* Elimina — SOLO admin */}
+              {/* ELIMINA — SOLO ADMIN */}
               {isAdmin && onDelete && (
                 <button
                   onClick={() => onDelete(o.id)}
@@ -91,8 +118,8 @@ export default function OrderList({
               )}
             </div>
           </div>
-        );
-      })}
+        ))}
+      </div>
     </div>
   );
 }
