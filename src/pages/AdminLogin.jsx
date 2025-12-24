@@ -25,7 +25,7 @@ export default function AdminLogin({ onLoginAdmin }) {
     navigate("/");
   }
 
-  return (
+  return (<div className="main-content">
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
       <form
         onSubmit={handleSubmit}
@@ -53,6 +53,6 @@ export default function AdminLogin({ onLoginAdmin }) {
           Accedi Admin
         </button>
       </form>
-    </div>
+    </div></div>
   );
 }

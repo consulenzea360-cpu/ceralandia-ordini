@@ -95,7 +95,7 @@ export default function Orders({ user, onLogout }) {
     }
   }
 
-  return (
+  return (<div className="main-content">
     <div>
       <Navbar onLogout={onLogout} />
 
@@ -140,6 +140,6 @@ export default function Orders({ user, onLogout }) {
           <OrderView order={viewing} onClose={() => setView("list")} />
         )}
       </div>
-    </div>
+    </div></div>
   );
 }

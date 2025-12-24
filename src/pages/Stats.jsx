@@ -52,7 +52,7 @@ export default function Stats({ user, onLogout }) {
     return map;
   }, [orders]);
 
-  return (
+  return (<div className="main-content">
     <div>
       <Navbar user={user} onLogout={onLogout} />
 
@@ -150,6 +150,6 @@ export default function Stats({ user, onLogout }) {
               );
             })}
       </div>
-    </div>
+    </div></div>
   );
 }

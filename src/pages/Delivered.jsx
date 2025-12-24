@@ -67,7 +67,7 @@ export default function Delivered({ user, onLogout }) {
     setView("list");
   }
 
-  return (
+  return (<div className="main-content">
     <div>
       <Navbar onLogout={onLogout} />
 
@@ -99,6 +99,6 @@ export default function Delivered({ user, onLogout }) {
           />
         )}
       </div>
-    </div>
+    </div></div>
   );
 }

@@ -1,5 +1,5 @@
 // FILE: src/components/DeliveredList.jsx
-import React, { useMemo, useState } from "react";
+import React, { useState, useMemo } from "react";
 import StatusLed from "./StatusLed";
 
 export default function DeliveredList({
@@ -11,49 +11,51 @@ export default function DeliveredList({
 }) {
   const [search, setSearch] = useState("");
 
-  const filtered = useMemo(() => {
-    const t = search.trim().toLowerCase();
-    if (!t) return orders;
+  // 🔍 FILTRO RICERCA
+  const filteredOrders = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    if (!q) return orders;
+
     return orders.filter(
       (o) =>
-        (o.cliente || "").toLowerCase().includes(t) ||
-        (o.telefono || "").toLowerCase().includes(t)
+        (o.cliente || "").toLowerCase().includes(q) ||
+        (o.telefono || "").toLowerCase().includes(q)
     );
   }, [orders, search]);
 
-  if (!orders.length)
+  if (!orders.length) {
     return (
       <div className="py-8 text-center text-gray-500">
         Nessun ordine consegnato.
       </div>
     );
+  }
 
   return (
     <div>
-      {/* Barra ricerca */}
+      {/* 🔍 BARRA RICERCA */}
       <div className="mb-4 flex gap-2">
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Cerca per nome o telefono"
+          placeholder="Cerca per cliente o telefono"
           className="flex-1 p-2 border rounded"
         />
         <button
           onClick={() => setSearch("")}
-          className="px-3 py-2 border rounded"
+          className="btn-small"
         >
           Reset
         </button>
       </div>
 
-      {/* Lista */}
+      {/* LISTA CONSEGNATI */}
       <div className="space-y-3">
-        {filtered.map((o) => (
+        {filteredOrders.map((o) => (
           <div
             key={o.id}
-            className="p-3 border rounded flex items-center justify-between bg-purple-50"
+            className="p-3 border rounded flex items-center justify-between bg-gray-50"
           >
-            {/* Info */}
             <div>
               <div className="font-medium">{o.cliente || "-"}</div>
               <div className="text-sm text-gray-600">
@@ -64,31 +66,30 @@ export default function DeliveredList({
               </div>
             </div>
 
-            {/* Azioni */}
             <div className="flex items-center gap-3">
               <StatusLed status={o.stato} />
 
-              {/* Visualizza sempre */}
+              {/* VISUALIZZA */}
               {onView && (
                 <button
                   onClick={() => onView(o)}
-                  className="px-2 py-1 border rounded bg-white hover:bg-gray-100"
+                  className="btn-small"
                 >
                   👁️
                 </button>
               )}
 
-              {/* Modifica solo admin */}
+              {/* MODIFICA (solo admin) */}
               {isAdmin && onEdit && (
                 <button
                   onClick={() => onEdit(o)}
-                  className="px-2 py-1 border rounded bg-gray-100 hover:bg-gray-200"
+                  className="btn-small"
                 >
                   ✏️
                 </button>
               )}
 
-              {/* Elimina solo admin */}
+              {/* ELIMINA (solo admin) */}
               {isAdmin && onDelete && (
                 <button
                   onClick={() => onDelete(o.id)}
