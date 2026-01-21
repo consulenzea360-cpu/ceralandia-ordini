@@ -16,7 +16,7 @@ export default function OrderList({
   const [pending, setPending] = useState(null);
   // pending = { id, prevStatus }
 
-  // 🔍 FILTRO RICERCA (identico a DeliveredList)
+  // 🔍 FILTRO RICERCA
   const filteredOrders = useMemo(() => {
     const q = search.toLowerCase().trim();
     if (!q) return orders;
@@ -77,13 +77,14 @@ export default function OrderList({
         </button>
       </div>
 
-      {/* LISTA ORDINI */}
+      {/* 📋 LISTA ORDINI */}
       <div className="space-y-3">
         {filteredOrders.map((o) => (
           <div
             key={o.id}
             className="p-3 border rounded flex items-center justify-between bg-gray-50"
           >
+            {/* INFO */}
             <div>
               <div className="font-medium">{o.cliente || "-"}</div>
               <div className="text-sm text-gray-600">
@@ -94,10 +95,11 @@ export default function OrderList({
               </div>
             </div>
 
+            {/* AZIONI */}
             <div className="flex items-center gap-3">
               <StatusLed status={o.stato} />
 
-              {/* 👁️ VISUALIZZA (identico a DeliveredList) */}
+              {/* 👁️ VISUALIZZA */}
               {onView && (
                 <button onClick={() => onView(o)} className="btn-small">
                   👁️
@@ -120,14 +122,14 @@ export default function OrderList({
                 </select>
               )}
 
-              {/* ✏️ MODIFICA */}
-              { onEdit && (
+              {/* ✏️ MODIFICA — ORA ABILITATA PER TUTTI */}
+              {onEdit && (
                 <button onClick={() => onEdit(o)} className="btn-small">
                   ✏️
                 </button>
               )}
 
-              {/* 🗑️ ELIMINA */}
+              {/* 🗑️ ELIMINA — SOLO ADMIN */}
               {isAdmin && onDelete && (
                 <button
                   onClick={() => onDelete(o.id)}
