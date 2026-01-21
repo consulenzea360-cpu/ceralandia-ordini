@@ -121,7 +121,7 @@ export default function OrderList({
               )}
 
               {/* ✏️ MODIFICA */}
-              {isAdmin && onEdit && (
+              { onEdit && (
                 <button onClick={() => onEdit(o)} className="btn-small">
                   ✏️
                 </button>
