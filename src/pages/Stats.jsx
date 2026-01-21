@@ -8,6 +8,10 @@ import {
   sortByConsegnaAsc,
   formatDate
 } from "../utils/datehelpers";
+import Footer from "../components/Footer";
+// ...
+<Footer />
+
 
 export default function Stats({ user, onLogout }) {
   const [orders, setOrders] = useState([]);

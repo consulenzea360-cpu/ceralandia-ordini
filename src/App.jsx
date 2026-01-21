@@ -8,6 +8,7 @@ import Home from "./pages/Home";
 import Orders from "./pages/Orders";
 import Delivered from "./pages/Delivered";
 import Stats from "./pages/Stats";
+import Products from "./pages/Products"; // ✅ NEW
 
 import { useAuth } from "./hooks/useAuth";
 
@@ -62,6 +63,15 @@ export default function App() {
             </PrivateRoute>
           }
         />
+		 {/* ✅ CATALOGO PRODOTTI */}
+      <Route
+        path="/products"
+        element={
+          <PrivateRoute>
+            <Products user={user} onLogout={logout} />
+          </PrivateRoute>
+        }
+      />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

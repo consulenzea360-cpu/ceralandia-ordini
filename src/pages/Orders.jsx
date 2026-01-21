@@ -11,6 +11,10 @@ import {
   updateOrder,
   deleteOrder
 } from "../utils/supabase";
+import Footer from "../components/Footer";
+// ...
+<Footer />
+
 
 export default function Orders({ user, onLogout }) {
   const isAdmin = user?.role === "admin";
