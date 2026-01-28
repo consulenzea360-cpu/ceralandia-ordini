@@ -4,12 +4,7 @@ import OrderList from "../components/OrderList";
 import OrderForm from "../components/OrderForm";
 import OrderView from "../components/OrderView";
 
-import {
-  fetchOrders,
-  insertOrder,
-  updateOrder,
-  deleteOrder
-} from "../utils/supabase";
+import { fetchOrders, insertOrder, updateOrder, deleteOrder } from "../utils/supabase";
 import Footer from "../components/Footer";
 
 export default function Orders({ user, onLogout }) {
@@ -22,10 +17,12 @@ export default function Orders({ user, onLogout }) {
   const [editing, setEditing] = useState(null);
   const [viewing, setViewing] = useState(null);
 
-  // ✅ salva e ripristina scroll quando apri/chiudi OrderView
+  // ✅ Search persistente
+  const [search, setSearch] = useState("");
+
+  // ✅ Scroll persistente
   const lastScrollYRef = useRef(0);
 
-  // Carica ordini
   async function load() {
     setLoading(true);
     try {
@@ -40,7 +37,6 @@ export default function Orders({ user, onLogout }) {
     load();
   }, []);
 
-  // Apre form inserimento
   function openInsert() {
     setEditing({
       cliente: "",
@@ -80,7 +76,7 @@ export default function Orders({ user, onLogout }) {
   }
 
   function handleView(order) {
-    // ✅ salva scroll prima di passare alla view
+    // ✅ salva scroll prima di aprire la view
     lastScrollYRef.current = window.scrollY;
 
     setViewing(order);
@@ -91,7 +87,7 @@ export default function Orders({ user, onLogout }) {
     setView("list");
     setViewing(null);
 
-    // ✅ ripristina scroll dopo che la lista è tornata visibile
+    // ✅ ripristina scroll dopo il re-render della lista
     requestAnimationFrame(() => {
       window.scrollTo({ top: lastScrollYRef.current, behavior: "auto" });
     });
@@ -99,7 +95,6 @@ export default function Orders({ user, onLogout }) {
 
   async function handleDelete(id) {
     if (!isAdmin) return alert("Solo l'admin può eliminare gli ordini.");
-
     if (!window.confirm("Sei sicuro di voler eliminare questo ordine?")) return;
 
     try {
@@ -128,9 +123,13 @@ export default function Orders({ user, onLogout }) {
             </button>
           </div>
 
+          {loading && <div className="mb-3 text-gray-500">Caricamento...</div>}
+
           {view === "list" && (
             <OrderList
               orders={orders}
+              search={search}
+              setSearch={setSearch}
               onEdit={handleEdit}
               onView={handleView}
               onDelete={handleDelete}
@@ -138,7 +137,6 @@ export default function Orders({ user, onLogout }) {
               onChangeStatus={async (id, stato) => {
                 const ord = orders.find((o) => o.id === id);
                 if (!ord) return;
-
                 await updateOrder({ ...ord, stato });
                 load();
               }}
