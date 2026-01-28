@@ -353,29 +353,12 @@ export default function Orders({ user, onLogout }) {
           </div>
 
           {loading && <div className="mb-3 text-gray-500">Caricamento...</div>}
+		  
 
           {view === "list" && (
-            <>
-              <OrderList
-                orders={orders}
-                search={search}
-                setSearch={setSearch}
-                onEdit={handleEdit}
-                onView={handleView}
-                onDelete={handleDelete}
-                isAdmin={isAdmin}
-                onChangeStatus={async (id, stato) => {
-                  const ord = orders.find((o) => o.id === id);
-                  if (!ord) return;
-
-                  await updateOrder({ ...ord, stato });
-                  await load();
-                }}
-              />
-
-              {/* ✅ link export/import sotto la scheda (solo admin) */}
+            <>{/* ✅ link export/import sotto la scheda (solo admin) */}
               {isAdmin && (
-                <div className="mt-4 flex gap-4 text-sm">
+                <div className="mb-3 flex gap-4 text-sm">
                   <button
                     type="button"
                     className="underline text-gray-700 hover:text-gray-900"
@@ -403,6 +386,24 @@ export default function Orders({ user, onLogout }) {
               )}
             </>
           )}
+              <OrderList
+                orders={orders}
+                search={search}
+                setSearch={setSearch}
+                onEdit={handleEdit}
+                onView={handleView}
+                onDelete={handleDelete}
+                isAdmin={isAdmin}
+                onChangeStatus={async (id, stato) => {
+                  const ord = orders.find((o) => o.id === id);
+                  if (!ord) return;
+
+                  await updateOrder({ ...ord, stato });
+                  await load();
+                }}
+              />
+
+              
 
           {view === "form" && editing && (
             <OrderForm
