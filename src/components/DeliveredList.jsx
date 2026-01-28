@@ -1,19 +1,21 @@
-// FILE: src/components/DeliveredList.jsx
 import React, { useState, useMemo } from "react";
 import StatusLed from "./StatusLed";
 
 export default function DeliveredList({
   orders = [],
+  search = "",
+  setSearch,
   onView,
   onEdit,
   onDelete,
   isAdmin = false
 }) {
-  const [search, setSearch] = useState("");
+  // ✅ fallback per evitare blocchi se qualcuno dimentica di passare setSearch
+  const safeSetSearch = typeof setSearch === "function" ? setSearch : () => {};
 
   // 🔍 FILTRO RICERCA
   const filteredOrders = useMemo(() => {
-    const q = search.toLowerCase().trim();
+    const q = (search || "").toLowerCase().trim();
     if (!q) return orders;
 
     return orders.filter(
@@ -37,14 +39,11 @@ export default function DeliveredList({
       <div className="mb-4 flex gap-2">
         <input
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => safeSetSearch(e.target.value)}
           placeholder="Cerca per cliente o telefono"
           className="flex-1 p-2 border rounded"
         />
-        <button
-          onClick={() => setSearch("")}
-          className="btn-small"
-        >
+        <button onClick={() => safeSetSearch("")} className="btn-small">
           Reset
         </button>
       </div>
@@ -60,9 +59,7 @@ export default function DeliveredList({
               <div className="font-medium">{o.cliente || "-"}</div>
               <div className="text-sm text-gray-600">
                 Tel: {o.telefono || "-"} • Consegna:{" "}
-                {o.consegna
-                  ? new Date(o.consegna).toLocaleDateString()
-                  : "-"}
+                {o.consegna ? new Date(o.consegna).toLocaleDateString() : "-"}
               </div>
             </div>
 
@@ -71,20 +68,14 @@ export default function DeliveredList({
 
               {/* VISUALIZZA */}
               {onView && (
-                <button
-                  onClick={() => onView(o)}
-                  className="btn-small"
-                >
+                <button onClick={() => onView(o)} className="btn-small">
                   👁️
                 </button>
               )}
 
               {/* MODIFICA (solo admin) */}
               {isAdmin && onEdit && (
-                <button
-                  onClick={() => onEdit(o)}
-                  className="btn-small"
-                >
+                <button onClick={() => onEdit(o)} className="btn-small">
                   ✏️
                 </button>
               )}
