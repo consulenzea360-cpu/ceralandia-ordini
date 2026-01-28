@@ -1,24 +1,24 @@
-import React, { useState, useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import StatusLed from "./StatusLed";
 
 export default function OrderList({
   orders = [],
+  search = "",
+  setSearch = () => {},
   onView,
   onEdit,
   onChangeStatus,
   onDelete,
   isAdmin = false
 }) {
-  const [search, setSearch] = useState("");
-
   // popup conferma consegnato
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, setPending] = useState(null);
   // pending = { id, prevStatus }
 
-  // 🔍 FILTRO RICERCA
+  // 🔍 FILTRO RICERCA (usa search esterna → persistente)
   const filteredOrders = useMemo(() => {
-    const q = search.toLowerCase().trim();
+    const q = (search || "").toLowerCase().trim();
     if (!q) return orders;
 
     return orders.filter(
@@ -89,9 +89,7 @@ export default function OrderList({
               <div className="font-medium">{o.cliente || "-"}</div>
               <div className="text-sm text-gray-600">
                 Tel: {o.telefono || "-"} • Consegna:{" "}
-                {o.consegna
-                  ? new Date(o.consegna).toLocaleDateString()
-                  : "-"}
+                {o.consegna ? new Date(o.consegna).toLocaleDateString() : "-"}
               </div>
             </div>
 
@@ -111,9 +109,7 @@ export default function OrderList({
                 <select
                   className="border p-1 rounded"
                   value={o.stato}
-                  onChange={(e) =>
-                    handleStatusChange(o, e.target.value)
-                  }
+                  onChange={(e) => handleStatusChange(o, e.target.value)}
                 >
                   <option value="da_prendere">Da prendere</option>
                   <option value="in_lavorazione">In lavorazione</option>
@@ -122,14 +118,14 @@ export default function OrderList({
                 </select>
               )}
 
-              {/* ✏️ MODIFICA — ORA ABILITATA PER TUTTI */}
+              {/* ✏️ MODIFICA — abilitata per tutti */}
               {onEdit && (
                 <button onClick={() => onEdit(o)} className="btn-small">
                   ✏️
                 </button>
               )}
 
-              {/* 🗑️ ELIMINA — SOLO ADMIN */}
+              {/* 🗑️ ELIMINA — solo admin */}
               {isAdmin && onDelete && (
                 <button
                   onClick={() => onDelete(o.id)}
@@ -147,12 +143,9 @@ export default function OrderList({
       {confirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="w-full max-w-sm rounded border bg-white p-4 shadow-lg">
-            <div className="text-lg font-medium mb-2">
-              Conferma consegna
-            </div>
+            <div className="text-lg font-medium mb-2">Conferma consegna</div>
             <div className="text-sm text-gray-600 mb-4">
-              Sei sicuro di voler impostare l’ordine come{" "}
-              <b>Consegnato</b>?
+              Sei sicuro di voler impostare l’ordine come <b>Consegnato</b>?
             </div>
 
             <div className="flex justify-end gap-2">
