@@ -1,5 +1,4 @@
-// FILE: src/pages/Orders.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Navbar from "../components/Navbar";
 import OrderList from "../components/OrderList";
 import OrderForm from "../components/OrderForm";
@@ -12,9 +11,6 @@ import {
   deleteOrder
 } from "../utils/supabase";
 import Footer from "../components/Footer";
-// ...
-<Footer />
-
 
 export default function Orders({ user, onLogout }) {
   const isAdmin = user?.role === "admin";
@@ -25,6 +21,9 @@ export default function Orders({ user, onLogout }) {
   const [view, setView] = useState("list"); // list | form | view
   const [editing, setEditing] = useState(null);
   const [viewing, setViewing] = useState(null);
+
+  // ✅ salva e ripristina scroll quando apri/chiudi OrderView
+  const lastScrollYRef = useRef(0);
 
   // Carica ordini
   async function load() {
@@ -81,8 +80,21 @@ export default function Orders({ user, onLogout }) {
   }
 
   function handleView(order) {
+    // ✅ salva scroll prima di passare alla view
+    lastScrollYRef.current = window.scrollY;
+
     setViewing(order);
     setView("view");
+  }
+
+  function handleCloseView() {
+    setView("list");
+    setViewing(null);
+
+    // ✅ ripristina scroll dopo che la lista è tornata visibile
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: lastScrollYRef.current, behavior: "auto" });
+    });
   }
 
   async function handleDelete(id) {
@@ -99,51 +111,55 @@ export default function Orders({ user, onLogout }) {
     }
   }
 
-  return (<div className="main-content">
-    <div>
-      <Navbar onLogout={onLogout} />
+  return (
+    <div className="main-content">
+      <div>
+        <Navbar onLogout={onLogout} />
 
-      <div className="container-max mx-auto p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold">Ordini in lavorazione</h2>
+        <div className="container-max mx-auto p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold">Ordini in lavorazione</h2>
 
-          <button
-            onClick={openInsert}
-            className="px-4 py-2 bg-green-600 text-white rounded"
-          >
-            Inserisci ordine
-          </button>
+            <button
+              onClick={openInsert}
+              className="px-4 py-2 bg-green-600 text-white rounded"
+            >
+              Inserisci ordine
+            </button>
+          </div>
+
+          {view === "list" && (
+            <OrderList
+              orders={orders}
+              onEdit={handleEdit}
+              onView={handleView}
+              onDelete={handleDelete}
+              isAdmin={isAdmin}
+              onChangeStatus={async (id, stato) => {
+                const ord = orders.find((o) => o.id === id);
+                if (!ord) return;
+
+                await updateOrder({ ...ord, stato });
+                load();
+              }}
+            />
+          )}
+
+          {view === "form" && editing && (
+            <OrderForm
+              initial={editing}
+              onSave={handleSave}
+              onCancel={() => setView("list")}
+            />
+          )}
+
+          {view === "view" && viewing && (
+            <OrderView order={viewing} onClose={handleCloseView} />
+          )}
         </div>
 
-        {view === "list" && (
-          <OrderList
-            orders={orders}
-            onEdit={handleEdit}
-            onView={handleView}
-            onDelete={handleDelete}
-            isAdmin={isAdmin}
-            onChangeStatus={async (id, stato) => {
-              const ord = orders.find((o) => o.id === id);
-              if (!ord) return;
-
-              await updateOrder({ ...ord, stato });
-              load();
-            }}
-          />
-        )}
-
-        {view === "form" && editing && (
-          <OrderForm
-            initial={editing}
-            onSave={handleSave}
-            onCancel={() => setView("list")}
-          />
-        )}
-
-        {view === "view" && viewing && (
-          <OrderView order={viewing} onClose={() => setView("list")} />
-        )}
+        <Footer />
       </div>
-    </div></div>
+    </div>
   );
 }
