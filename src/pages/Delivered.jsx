@@ -320,18 +320,7 @@ async function handleImportFile(e) {
           {loading && <div className="mb-3 text-gray-500">Caricamento...</div>}
 
           {view === "list" && (
-            <>
-              <DeliveredList
-                orders={orders}
-                search={search}
-                setSearch={setSearch}
-                onView={handleView}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                isAdmin={isAdmin}
-              />
-
-              {isAdmin && (
+            <>   {isAdmin && (
                 <div className="mt-4 flex gap-4 text-sm">
                   <button
                     type="button"
@@ -358,6 +347,17 @@ async function handleImportFile(e) {
                   />
                 </div>
               )}
+              <DeliveredList
+                orders={orders}
+                search={search}
+                setSearch={setSearch}
+                onView={handleView}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                isAdmin={isAdmin}
+              />
+
+           
             </>
           )}
 
