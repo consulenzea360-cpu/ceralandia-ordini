@@ -321,7 +321,7 @@ async function handleImportFile(e) {
 
           {view === "list" && (
             <>   {isAdmin && (
-                <div className="mt-4 flex gap-4 text-sm">
+                <div className="mb-3 flex gap-4 text-sm">
                   <button
                     type="button"
                     className="underline text-gray-700 hover:text-gray-900"
