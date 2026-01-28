@@ -288,45 +288,52 @@ export default function Orders({ user, onLogout }) {
     importInputRef.current?.click();
   }
 
-  async function handleImportFile(e) {
-    if (!isAdmin) return;
+ async function handleImportFile(e) {
+  if (!isAdmin) return;
 
-    const file = e.target.files?.[0];
-    e.target.value = ""; // permette reimport dello stesso file
-    if (!file) return;
+  const file = e.target.files?.[0];
+  e.target.value = ""; // permette reimport dello stesso file
+  if (!file) return;
+
+  setLoading(true);
+  try {
+    const text = await file.text();
+    const importedOrders = csvToOrders(text);
+
+    const count = importedOrders.length;
+
+    if (!count) {
+      alert("Il CSV sembra vuoto oppure non contiene ordini importabili.");
+      return;
+    }
 
     const ok = window.confirm(
-      "IMPORT CSV: questa operazione sovrascrive gli ordini in lavorazione (cancella quelli attuali e importa quelli del CSV). Continuare?"
+      `Stai per importare ${count} ordini in lavorazione.\n\n` +
+      `ATTENZIONE: questa operazione sovrascrive gli ordini in lavorazione (cancella quelli attuali e importa quelli del CSV).\n\n` +
+      `Continuare?`
     );
     if (!ok) return;
 
-    setLoading(true);
-    try {
-      const text = await file.text();
-      const importedOrders = csvToOrders(text);
+    // 1) prendi tutti gli ordini attuali di questa scheda
+    const current = await fetchOrders({ deliveredFlag: false });
 
-      // 1) prendi tutti gli ordini attuali di questa scheda
-      const current = await fetchOrders({ deliveredFlag: false });
+    // 2) elimina tutti
+    await Promise.all(current.map((o) => deleteOrder(o.id)));
 
-      // 2) elimina tutti
-      await Promise.all(current.map((o) => deleteOrder(o.id)));
-
-      // 3) inserisci tutti dal CSV
-      for (const o of importedOrders) {
-        // forziamo che NON siano consegnati se stai importando "in lavorazione"
-        // (se nel csv ci fosse consegnato, resterebbe coerente ma finirebbe nei consegnati a seconda della tua fetchOrders)
-        await insertOrder(o);
-      }
-
-      await load();
-      alert("Import CSV completato.");
-    } catch (err) {
-      console.error(err);
-      alert("Errore import CSV. Controlla che il file sia un export del sistema.");
-    } finally {
-      setLoading(false);
+    // 3) inserisci tutti dal CSV
+    for (const o of importedOrders) {
+      await insertOrder(o);
     }
+
+    await load();
+    alert("Import CSV completato.");
+  } catch (err) {
+    console.error(err);
+    alert("Errore import CSV. Controlla che il file sia un export del sistema.");
+  } finally {
+    setLoading(false);
   }
+}
 
   return (
     <div className="main-content">

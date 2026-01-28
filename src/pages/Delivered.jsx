@@ -265,39 +265,49 @@ export default function Delivered({ user, onLogout }) {
     importInputRef.current?.click();
   }
 
-  async function handleImportFile(e) {
-    if (!isAdmin) return;
+async function handleImportFile(e) {
+  if (!isAdmin) return;
 
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
+  const file = e.target.files?.[0];
+  e.target.value = "";
+  if (!file) return;
+
+  setLoading(true);
+  try {
+    const text = await file.text();
+    const importedOrders = csvToOrders(text);
+
+    const count = importedOrders.length;
+
+    if (!count) {
+      alert("Il CSV sembra vuoto oppure non contiene ordini importabili.");
+      return;
+    }
 
     const ok = window.confirm(
-      "IMPORT CSV: questa operazione sovrascrive gli ordini consegnati (cancella quelli attuali e importa quelli del CSV). Continuare?"
+      `Stai per importare ${count} ordini consegnati.\n\n` +
+      `ATTENZIONE: questa operazione sovrascrive gli ordini consegnati (cancella quelli attuali e importa quelli del CSV).\n\n` +
+      `Continuare?`
     );
     if (!ok) return;
 
-    setLoading(true);
-    try {
-      const text = await file.text();
-      const importedOrders = csvToOrders(text);
+    const current = await fetchOrders({ deliveredFlag: true });
+    await Promise.all(current.map((o) => deleteOrder(o.id)));
 
-      const current = await fetchOrders({ deliveredFlag: true });
-      await Promise.all(current.map((o) => deleteOrder(o.id)));
-
-      for (const o of importedOrders) {
-        await insertOrder({ ...o, stato: "consegnato" });
-      }
-
-      await load();
-      alert("Import CSV completato.");
-    } catch (err) {
-      console.error(err);
-      alert("Errore import CSV. Controlla che il file sia un export del sistema.");
-    } finally {
-      setLoading(false);
+    for (const o of importedOrders) {
+      // sicurezza: consegnati restano consegnati
+      await insertOrder({ ...o, stato: "consegnato" });
     }
+
+    await load();
+    alert("Import CSV completato.");
+  } catch (err) {
+    console.error(err);
+    alert("Errore import CSV. Controlla che il file sia un export del sistema.");
+  } finally {
+    setLoading(false);
   }
+}
 
   return (
     <div className="main-content">
