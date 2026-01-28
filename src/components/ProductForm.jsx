@@ -1,26 +1,24 @@
-// FILE: src/components/ProductForm.jsx
 import React, { useEffect, useRef, useState } from "react";
 import ProductImageModal from "./ProductImageModal";
 
 export default function ProductForm({ initial, onSave, onCancel }) {
-  const [form, setForm] = useState(
-    initial || {
-      id: null,
-      nome: "",
-      immagine: "",
-      prezzo_dettaglio: "",
-      prezzo_10: "",
-      prezzo_20: "",
-      prezzo_50: "",
-      prezzo_100: "",
-      prezzo_100_plus: ""
-    }
-  );
+  const [form, setForm] = useState({
+    id: null,
+    nome: "",
+    immagine: "",
+    prezzo_dettaglio: "",
+    prezzo_10: "",
+    prezzo_20: "",
+    prezzo_50: "",
+    prezzo_100: "",
+    prezzo_100_plus: ""
+  });
 
   const [previewImage, setPreviewImage] = useState(null);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
+    // Riallinea il form quando cambi "initial"
     if (initial) {
       setForm({
         id: initial.id ?? null,
@@ -33,6 +31,18 @@ export default function ProductForm({ initial, onSave, onCancel }) {
         prezzo_100: initial.prezzo_100 ?? "",
         prezzo_100_plus: initial.prezzo_100_plus ?? ""
       });
+    } else {
+      setForm({
+        id: null,
+        nome: "",
+        immagine: "",
+        prezzo_dettaglio: "",
+        prezzo_10: "",
+        prezzo_20: "",
+        prezzo_50: "",
+        prezzo_100: "",
+        prezzo_100_plus: ""
+      });
     }
   }, [initial?.id]);
 
@@ -43,7 +53,7 @@ export default function ProductForm({ initial, onSave, onCancel }) {
 
   async function handlePickFile(e) {
     const file = e.target.files?.[0];
-    e.target.value = "";
+    e.target.value = ""; // consente di riselezionare lo stesso file
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
@@ -51,7 +61,7 @@ export default function ProductForm({ initial, onSave, onCancel }) {
       return;
     }
 
-    // Convertiamo l’immagine in base64 (DataURL) per usarla subito nel catalogo
+    // Salviamo la preview come base64 (DataURL)
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result;
@@ -62,15 +72,23 @@ export default function ProductForm({ initial, onSave, onCancel }) {
 
   function handleSubmit(e) {
     e.preventDefault();
+
+    // nome obbligatorio (già required, ma per sicurezza)
+    if (!String(form.nome || "").trim()) {
+      alert("Inserisci il nome del prodotto.");
+      return;
+    }
+
     onSave(form);
   }
 
-  const thumbSizePx = 113; // ~3cm a 96dpi (riferimento visivo)
+  // 3×3 cm circa (riferimento visivo su schermo)
+  const thumbSizePx = 113;
 
   return (
     <div className="card mb-6">
       <h3 className="text-xl font-semibold mb-4">
-        {initial ? "Modifica Prodotto" : "Nuovo Prodotto"}
+        {form.id ? "Modifica Prodotto" : "Nuovo Prodotto"}
       </h3>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -83,7 +101,7 @@ export default function ProductForm({ initial, onSave, onCancel }) {
           required
         />
 
-        {/* IMMAGINE: upload + preview 3x3 cm + camera icon */}
+        {/* IMMAGINE: upload + preview 3x3cm + camera icon */}
         <div className="flex items-start gap-4">
           <div className="relative" style={{ width: thumbSizePx, height: thumbSizePx }}>
             <div
@@ -106,7 +124,7 @@ export default function ProductForm({ initial, onSave, onCancel }) {
             {/* Icona fotocamera */}
             <button
               type="button"
-              className="absolute bottom-1 right-1 bg-white/90 border rounded-full w-8 h-8 flex items-center justify-center shadow hover:bg-white"
+              className="absolute bottom-1 right-1 bg-white/90 border rounded-full w-8 h-8 flex items-center justify-center shadow hover:bg-white disabled:opacity-50"
               title="Visualizza immagine"
               onClick={() => {
                 if (form.immagine) setPreviewImage(form.immagine);
@@ -146,63 +164,63 @@ export default function ProductForm({ initial, onSave, onCancel }) {
               onChange={handlePickFile}
             />
 
-            {/* Manteniamo anche URL manuale (se preferisci link) */}
+            {/* Campo URL/manuale: utile se vuoi incollare un link o un base64 */}
             <input
               name="immagine"
               placeholder="URL immagine (opzionale) o incolla base64"
-              value={form.immagine || ""}
+              value={form.immagine}
               onChange={handleChange}
               className="w-full p-2 border rounded"
             />
 
             <div className="text-xs text-gray-500">
-              L’immagine viene mostrata in anteprima su un riquadro 3×3 cm (circa).
-              Clicca sulla fotocamera per aprire il popup (50% schermo).
+              L’immagine viene mostrata su un riquadro 3×3 cm (circa).
+              Clicca sulla fotocamera per aprire il popup.
             </div>
           </div>
         </div>
 
-        {/* PREZZI */}
+        {/* PREZZI (tutti controllati) */}
         <div className="grid grid-cols-2 gap-3">
           <input
             name="prezzo_dettaglio"
             placeholder="Prezzo dettaglio"
-            value={form.prezzo_dettaglio ?? ""}
+            value={form.prezzo_dettaglio}
             onChange={handleChange}
             className="p-2 border rounded"
           />
           <input
             name="prezzo_10"
             placeholder="Prezzo x10"
-            value={form.prezzo_10 ?? ""}
+            value={form.prezzo_10}
             onChange={handleChange}
             className="p-2 border rounded"
           />
           <input
             name="prezzo_20"
             placeholder="Prezzo x20"
-            value={form.prezzo_20 ?? ""}
+            value={form.prezzo_20}
             onChange={handleChange}
             className="p-2 border rounded"
           />
           <input
             name="prezzo_50"
             placeholder="Prezzo x50"
-            value={form.prezzo_50 ?? ""}
+            value={form.prezzo_50}
             onChange={handleChange}
             className="p-2 border rounded"
           />
           <input
             name="prezzo_100"
             placeholder="Prezzo x100"
-            value={form.prezzo_100 ?? ""}
+            value={form.prezzo_100}
             onChange={handleChange}
             className="p-2 border rounded"
           />
           <input
             name="prezzo_100_plus"
             placeholder="Prezzo 100+"
-            value={form.prezzo_100_plus ?? ""}
+            value={form.prezzo_100_plus}
             onChange={handleChange}
             className="p-2 border rounded"
           />
@@ -218,10 +236,7 @@ export default function ProductForm({ initial, onSave, onCancel }) {
         </div>
       </form>
 
-      <ProductImageModal
-        image={previewImage}
-        onClose={() => setPreviewImage(null)}
-      />
+      <ProductImageModal image={previewImage} onClose={() => setPreviewImage(null)} />
     </div>
   );
 }

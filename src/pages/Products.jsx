@@ -1,8 +1,10 @@
 // FILE: src/pages/Products.jsx
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Navbar from "../components/Navbar";
 import ProductForm from "../components/ProductForm";
 import ProductImageModal from "../components/ProductImageModal";
+
+import { fetchProducts, insertProduct, updateProduct, deleteProduct } from "../utils/supabase";
 
 export default function Products({ user, onLogout }) {
   const isAdmin = user?.role === "admin";
@@ -11,28 +13,61 @@ export default function Products({ user, onLogout }) {
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  function handleSave(product) {
-    if (product.id) {
-      setProducts(products.map((p) => (p.id === product.id ? product : p)));
-    } else {
-      setProducts([...products, { ...product, id: Date.now() }]);
+  async function load() {
+    setLoading(true);
+    try {
+      const data = await fetchProducts();
+      setProducts(data);
+    } catch (e) {
+      console.error(e);
+      alert("Errore caricamento catalogo prodotti.");
+    } finally {
+      setLoading(false);
     }
-    setEditing(null);
   }
 
-  function handleDelete(id) {
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function handleSave(product) {
+    setLoading(true);
+    try {
+      if (product.id) await updateProduct(product);
+      else await insertProduct(product);
+
+      await load();
+      setEditing(null);
+    } catch (e) {
+      console.error(e);
+      alert("Errore salvataggio prodotto (controlla policy Supabase).");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleDelete(id) {
+    if (!isAdmin) return;
     if (!window.confirm("Eliminare il prodotto?")) return;
-    setProducts(products.filter((p) => p.id !== id));
+
+    setLoading(true);
+    try {
+      await deleteProduct(id);
+      await load();
+    } catch (e) {
+      console.error(e);
+      alert("Errore eliminazione prodotto (controlla policy Supabase).");
+    } finally {
+      setLoading(false);
+    }
   }
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return products;
-
-    return products.filter((p) =>
-      (p.nome || "").toLowerCase().includes(q)
-    );
+    return products.filter((p) => (p.nome || "").toLowerCase().includes(q));
   }, [search, products]);
 
   const thumbSize = 72;
@@ -69,13 +104,12 @@ export default function Products({ user, onLogout }) {
           className="w-full p-2 border rounded mb-4"
         />
 
+        {loading && <div className="mb-3 text-gray-500">Caricamento...</div>}
+
         {/* ELENCO */}
         <div className="space-y-3">
           {filtered.map((p) => (
-            <div
-              key={p.id}
-              className="p-3 border rounded bg-gray-50 flex items-start gap-3"
-            >
+            <div key={p.id} className="p-3 border rounded bg-gray-50 flex items-start gap-3">
               {/* Immagine sx */}
               <div
                 className="relative rounded overflow-hidden border bg-white flex-shrink-0"
@@ -112,9 +146,7 @@ export default function Products({ user, onLogout }) {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="font-semibold text-lg">{p.nome || "-"}</div>
-                    <div className="text-xs text-gray-500">
-                      ID: {p.id}
-                    </div>
+                    <div className="text-xs text-gray-500">ID: {p.id}</div>
                   </div>
 
                   {isAdmin && (
@@ -144,18 +176,13 @@ export default function Products({ user, onLogout }) {
             </div>
           ))}
 
-          {!filtered.length && (
-            <div className="py-10 text-center text-gray-500">
-              Nessun prodotto trovato.
-            </div>
+          {!filtered.length && !loading && (
+            <div className="py-10 text-center text-gray-500">Nessun prodotto trovato.</div>
           )}
         </div>
       </div>
 
-      <ProductImageModal
-        image={previewImage}
-        onClose={() => setPreviewImage(null)}
-      />
+      <ProductImageModal image={previewImage} onClose={() => setPreviewImage(null)} />
     </div>
   );
 }
