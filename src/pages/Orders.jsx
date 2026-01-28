@@ -17,10 +17,10 @@ export default function Orders({ user, onLogout }) {
   const [editing, setEditing] = useState(null);
   const [viewing, setViewing] = useState(null);
 
-  // ✅ Search persistente
+  // ✅ search persistente
   const [search, setSearch] = useState("");
 
-  // ✅ Scroll persistente
+  // ✅ scroll persistente
   const lastScrollYRef = useRef(0);
 
   async function load() {
@@ -41,8 +41,8 @@ export default function Orders({ user, onLogout }) {
     setEditing({
       cliente: "",
       telefono: "",
-      operatore: user.username,
-      lavoratore: user.username,
+      operatore: user?.username,
+      lavoratore: user?.username,
       prodotti: [],
       stato: "da_prendere",
       consegna: null
@@ -55,6 +55,7 @@ export default function Orders({ user, onLogout }) {
     try {
       if (order.id) await updateOrder(order);
       else await insertOrder(order);
+
       await load();
       setView("list");
       setEditing(null);
@@ -67,30 +68,43 @@ export default function Orders({ user, onLogout }) {
   }
 
   function handleEdit(order) {
+    // opzionale: blocco modifica per non-admin su consegnato
     if (!isAdmin && order.stato === "consegnato") {
       alert("Non puoi modificare un ordine consegnato.");
       return;
     }
+
+    // salva scroll prima di cambiare vista
+    lastScrollYRef.current = window.scrollY;
+
     setEditing(order);
     setView("form");
   }
 
   function handleView(order) {
-    // ✅ salva scroll prima di aprire la view
+    // salva scroll prima di aprire la view
     lastScrollYRef.current = window.scrollY;
 
     setViewing(order);
     setView("view");
   }
 
-  function handleCloseView() {
-    setView("list");
-    setViewing(null);
-
-    // ✅ ripristina scroll dopo il re-render della lista
+  function restoreScrollAfterListRender() {
     requestAnimationFrame(() => {
       window.scrollTo({ top: lastScrollYRef.current, behavior: "auto" });
     });
+  }
+
+  function handleCloseView() {
+    setView("list");
+    setViewing(null);
+    restoreScrollAfterListRender();
+  }
+
+  function handleCancelForm() {
+    setView("list");
+    setEditing(null);
+    restoreScrollAfterListRender();
   }
 
   async function handleDelete(id) {
@@ -137,8 +151,9 @@ export default function Orders({ user, onLogout }) {
               onChangeStatus={async (id, stato) => {
                 const ord = orders.find((o) => o.id === id);
                 if (!ord) return;
+
                 await updateOrder({ ...ord, stato });
-                load();
+                await load();
               }}
             />
           )}
@@ -147,12 +162,23 @@ export default function Orders({ user, onLogout }) {
             <OrderForm
               initial={editing}
               onSave={handleSave}
-              onCancel={() => setView("list")}
+              onCancel={handleCancelForm}
             />
           )}
 
           {view === "view" && viewing && (
-            <OrderView order={viewing} onClose={handleCloseView} />
+            <OrderView
+              order={viewing}
+              onClose={handleCloseView}
+              // ✅ qui passiamo onChangeStatus: in "in lavorazione" vuoi cambiarlo anche da view
+              onChangeStatus={async (id, stato) => {
+                const ord = orders.find((o) => o.id === id);
+                if (!ord) return;
+
+                await updateOrder({ ...ord, stato });
+                await load();
+              }}
+            />
           )}
         </div>
 
