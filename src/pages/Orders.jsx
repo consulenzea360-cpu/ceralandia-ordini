@@ -157,6 +157,9 @@ export default function Orders({ user, onLogout }) {
   const [editing, setEditing] = useState(null);
   const [viewing, setViewing] = useState(null);
 
+  // ✅ SEARCH (serve per non bloccare l’input in OrderList)
+  const [search, setSearch] = useState("");
+
   // ✅ scroll persistente
   const lastScrollYRef = useRef(0);
 
@@ -180,8 +183,13 @@ export default function Orders({ user, onLogout }) {
     load();
   }, []);
 
+  function restoreScroll() {
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: lastScrollYRef.current, behavior: "auto" });
+    });
+  }
+
   function openInsert() {
-    // robusto: admin Supabase spesso non ha username
     const who =
       user?.username ||
       user?.email ||
@@ -232,12 +240,6 @@ export default function Orders({ user, onLogout }) {
     lastScrollYRef.current = window.scrollY;
     setViewing(order);
     setView("view");
-  }
-
-  function restoreScroll() {
-    requestAnimationFrame(() => {
-      window.scrollTo({ top: lastScrollYRef.current, behavior: "auto" });
-    });
   }
 
   function handleCloseView() {
@@ -300,7 +302,7 @@ export default function Orders({ user, onLogout }) {
     if (!isAdmin) return;
 
     const file = e.target.files?.[0];
-    e.target.value = ""; // permette reimport dello stesso file
+    e.target.value = "";
     if (!file) return;
 
     setLoading(true);
@@ -360,7 +362,7 @@ export default function Orders({ user, onLogout }) {
           {/* ✅ LISTA */}
           {view === "list" && (
             <>
-              {/* ✅ Export/Import ALL’INIZIO della lista */}
+              {/* ✅ Export/Import all’inizio */}
               {isAdmin && (
                 <div className="mb-3 flex gap-4 text-sm">
                   <button
@@ -391,6 +393,8 @@ export default function Orders({ user, onLogout }) {
 
               <OrderList
                 orders={orders}
+                search={search}
+                setSearch={setSearch}
                 onEdit={handleEdit}
                 onView={handleView}
                 onDelete={handleDelete}
