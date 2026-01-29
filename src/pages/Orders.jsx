@@ -3,9 +3,9 @@ import Navbar from "../components/Navbar";
 import OrderList from "../components/OrderList";
 import OrderForm from "../components/OrderForm";
 import OrderView from "../components/OrderView";
+import Footer from "../components/Footer";
 
 import { fetchOrders, insertOrder, updateOrder, deleteOrder } from "../utils/supabase";
-import Footer from "../components/Footer";
 
 /** ===== CSV helpers (robusti, con virgolette) ===== */
 function parseCSV(text) {
@@ -28,9 +28,8 @@ function parseCSV(text) {
         field += c;
       }
     } else {
-      if (c === '"') {
-        inQuotes = true;
-      } else if (c === ",") {
+      if (c === '"') inQuotes = true;
+      else if (c === ",") {
         row.push(field);
         field = "";
       } else if (c === "\n") {
@@ -46,11 +45,9 @@ function parseCSV(text) {
     }
   }
 
-  // last field
   row.push(field);
   rows.push(row);
 
-  // rimuovi righe vuote
   return rows.filter((r) => r.some((x) => String(x || "").trim() !== ""));
 }
 
@@ -72,7 +69,6 @@ function downloadCSV(csvText, filename) {
   URL.revokeObjectURL(url);
 }
 
-/** Serializzazione CSV “fedele” per reimport */
 function ordersToCSV(orders) {
   const headers = [
     "id",
@@ -98,7 +94,9 @@ function ordersToCSV(orders) {
         o.stato ?? "",
         o.consegna ? new Date(o.consegna).toISOString() : "",
         JSON.stringify(o.prodotti ?? [])
-      ].map(toCSVCell).join(",")
+      ]
+        .map(toCSVCell)
+        .join(",")
     );
   }
 
@@ -159,13 +157,10 @@ export default function Orders({ user, onLogout }) {
   const [editing, setEditing] = useState(null);
   const [viewing, setViewing] = useState(null);
 
-  // ✅ search persistente
-  const [search, setSearch] = useState("");
-
   // ✅ scroll persistente
   const lastScrollYRef = useRef(0);
 
-  // ✅ file input import (nascosto)
+  // ✅ import input
   const importInputRef = useRef(null);
 
   async function load() {
@@ -173,6 +168,9 @@ export default function Orders({ user, onLogout }) {
     try {
       const data = await fetchOrders({ deliveredFlag: false });
       setOrders(data);
+    } catch (e) {
+      console.error(e);
+      alert("Errore caricamento ordini.");
     } finally {
       setLoading(false);
     }
@@ -183,15 +181,26 @@ export default function Orders({ user, onLogout }) {
   }, []);
 
   function openInsert() {
+    // robusto: admin Supabase spesso non ha username
+    const who =
+      user?.username ||
+      user?.email ||
+      user?.user_metadata?.username ||
+      user?.user_metadata?.full_name ||
+      "admin";
+
+    lastScrollYRef.current = window.scrollY;
+
     setEditing({
       cliente: "",
       telefono: "",
-      operatore: user?.username,
-      lavoratore: user?.username,
+      operatore: who,
+      lavoratore: who,
       prodotti: [],
       stato: "da_prendere",
       consegna: null
     });
+
     setView("form");
   }
 
@@ -204,6 +213,7 @@ export default function Orders({ user, onLogout }) {
       await load();
       setView("list");
       setEditing(null);
+      restoreScroll();
     } catch (err) {
       console.error(err);
       alert("Errore durante il salvataggio.");
@@ -213,11 +223,6 @@ export default function Orders({ user, onLogout }) {
   }
 
   function handleEdit(order) {
-    if (!isAdmin && order.stato === "consegnato") {
-      alert("Non puoi modificare un ordine consegnato.");
-      return;
-    }
-
     lastScrollYRef.current = window.scrollY;
     setEditing(order);
     setView("form");
@@ -229,7 +234,7 @@ export default function Orders({ user, onLogout }) {
     setView("view");
   }
 
-  function restoreScrollAfterListRender() {
+  function restoreScroll() {
     requestAnimationFrame(() => {
       window.scrollTo({ top: lastScrollYRef.current, behavior: "auto" });
     });
@@ -238,35 +243,38 @@ export default function Orders({ user, onLogout }) {
   function handleCloseView() {
     setView("list");
     setViewing(null);
-    restoreScrollAfterListRender();
+    restoreScroll();
   }
 
   function handleCancelForm() {
     setView("list");
     setEditing(null);
-    restoreScrollAfterListRender();
+    restoreScroll();
   }
 
   async function handleDelete(id) {
     if (!isAdmin) return alert("Solo l'admin può eliminare gli ordini.");
     if (!window.confirm("Sei sicuro di voler eliminare questo ordine?")) return;
 
+    setLoading(true);
     try {
       await deleteOrder(id);
       await load();
     } catch (err) {
       console.error(err);
       alert("Errore durante l'eliminazione.");
+    } finally {
+      setLoading(false);
     }
   }
 
-  /** ===== EXPORT / IMPORT (solo admin) ===== */
+  /** ===== EXPORT / IMPORT CSV (solo admin) ===== */
   async function handleExportCSV() {
     if (!isAdmin) return;
 
     setLoading(true);
     try {
-      const all = await fetchOrders({ deliveredFlag: false }); // prende tutto dal DB
+      const all = await fetchOrders({ deliveredFlag: false });
       const csv = ordersToCSV(all);
 
       const d = new Date();
@@ -288,52 +296,47 @@ export default function Orders({ user, onLogout }) {
     importInputRef.current?.click();
   }
 
- async function handleImportFile(e) {
-  if (!isAdmin) return;
+  async function handleImportFile(e) {
+    if (!isAdmin) return;
 
-  const file = e.target.files?.[0];
-  e.target.value = ""; // permette reimport dello stesso file
-  if (!file) return;
+    const file = e.target.files?.[0];
+    e.target.value = ""; // permette reimport dello stesso file
+    if (!file) return;
 
-  setLoading(true);
-  try {
-    const text = await file.text();
-    const importedOrders = csvToOrders(text);
+    setLoading(true);
+    try {
+      const text = await file.text();
+      const importedOrders = csvToOrders(text);
+      const count = importedOrders.length;
 
-    const count = importedOrders.length;
+      if (!count) {
+        alert("Il CSV sembra vuoto oppure non contiene ordini importabili.");
+        return;
+      }
 
-    if (!count) {
-      alert("Il CSV sembra vuoto oppure non contiene ordini importabili.");
-      return;
+      const ok = window.confirm(
+        `Stai per importare ${count} ordini in lavorazione.\n\n` +
+          `ATTENZIONE: questa operazione sovrascrive gli ordini in lavorazione (cancella quelli attuali e importa quelli del CSV).\n\n` +
+          `Continuare?`
+      );
+      if (!ok) return;
+
+      const current = await fetchOrders({ deliveredFlag: false });
+      await Promise.all(current.map((o) => deleteOrder(o.id)));
+
+      for (const o of importedOrders) {
+        await insertOrder(o);
+      }
+
+      await load();
+      alert("Import CSV completato.");
+    } catch (err) {
+      console.error(err);
+      alert("Errore import CSV. Controlla che il file sia un export del sistema.");
+    } finally {
+      setLoading(false);
     }
-
-    const ok = window.confirm(
-      `Stai per importare ${count} ordini in lavorazione.\n\n` +
-      `ATTENZIONE: questa operazione sovrascrive gli ordini in lavorazione (cancella quelli attuali e importa quelli del CSV).\n\n` +
-      `Continuare?`
-    );
-    if (!ok) return;
-
-    // 1) prendi tutti gli ordini attuali di questa scheda
-    const current = await fetchOrders({ deliveredFlag: false });
-
-    // 2) elimina tutti
-    await Promise.all(current.map((o) => deleteOrder(o.id)));
-
-    // 3) inserisci tutti dal CSV
-    for (const o of importedOrders) {
-      await insertOrder(o);
-    }
-
-    await load();
-    alert("Import CSV completato.");
-  } catch (err) {
-    console.error(err);
-    alert("Errore import CSV. Controlla che il file sia un export del sistema.");
-  } finally {
-    setLoading(false);
   }
-}
 
   return (
     <div className="main-content">
@@ -353,10 +356,11 @@ export default function Orders({ user, onLogout }) {
           </div>
 
           {loading && <div className="mb-3 text-gray-500">Caricamento...</div>}
-		  
 
+          {/* ✅ LISTA */}
           {view === "list" && (
-            <>{/* ✅ link export/import sotto la scheda (solo admin) */}
+            <>
+              {/* ✅ Export/Import ALL’INIZIO della lista */}
               {isAdmin && (
                 <div className="mb-3 flex gap-4 text-sm">
                   <button
@@ -384,12 +388,9 @@ export default function Orders({ user, onLogout }) {
                   />
                 </div>
               )}
-            </>
-          )}
+
               <OrderList
                 orders={orders}
-                search={search}
-                setSearch={setSearch}
                 onEdit={handleEdit}
                 onView={handleView}
                 onDelete={handleDelete}
@@ -402,17 +403,15 @@ export default function Orders({ user, onLogout }) {
                   await load();
                 }}
               />
-
-              
-
-          {view === "form" && editing && (
-            <OrderForm
-              initial={editing}
-              onSave={handleSave}
-              onCancel={handleCancelForm}
-            />
+            </>
           )}
 
+          {/* ✅ FORM */}
+          {view === "form" && editing && (
+            <OrderForm initial={editing} onSave={handleSave} onCancel={handleCancelForm} />
+          )}
+
+          {/* ✅ VIEW */}
           {view === "view" && viewing && (
             <OrderView
               order={viewing}
