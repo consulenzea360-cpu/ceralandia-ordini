@@ -1,4 +1,4 @@
-// supabase utility JS placeholder
+// supabase utility JS
 import { createClient } from "@supabase/supabase-js";
 import { sortByConsegnaAsc, sortByConsegnaDesc } from "./datehelpers";
 
@@ -23,9 +23,7 @@ export async function fetchOrders({ deliveredFlag = false } = {}) {
     ? data.filter((o) => o.stato === "consegnato")
     : data.filter((o) => o.stato !== "consegnato");
 
-  return deliveredFlag
-    ? sortByConsegnaDesc(filtered)
-    : sortByConsegnaAsc(filtered);
+  return deliveredFlag ? sortByConsegnaDesc(filtered) : sortByConsegnaAsc(filtered);
 }
 
 // --------------------------------------------------
@@ -51,7 +49,6 @@ export async function insertOrder(order) {
     .single();
 
   if (error) throw error;
-
   return data;
 }
 
@@ -77,7 +74,6 @@ export async function updateOrder(order) {
     .single();
 
   if (error) throw error;
-
   return data;
 }
 
@@ -85,24 +81,13 @@ export async function updateOrder(order) {
 // DELETE ORDER (solo admin)
 // --------------------------------------------------
 export async function deleteOrder(id) {
-  const { error } = await supabase
-    .from("orders")
-    .delete()
-    .eq("id", id);
-
+  const { error } = await supabase.from("orders").delete().eq("id", id);
   if (error) throw error;
 }
-// ===== PRODUCTS CRUD =====
 
-export async function fetchProducts() {
-  const { data, error } = await supabase
-    .from("products")
-    .select("*")
-    .order("created_at", { ascending: false });
-
-  if (error) throw error;
-  return data || [];
-}
+// ==================================================
+// PRODUCTS (CATALOGO) CRUD  -> tabella: products_catalog
+// ==================================================
 
 export async function fetchProducts() {
   const { data, error } = await supabase
@@ -116,47 +101,14 @@ export async function fetchProducts() {
 
 export async function insertProduct(product) {
   const payload = {
-    nome: product.nome ?? "",
-    immagine: product.immagine ?? "",
-    prezzo_dettaglio: product.prezzo_dettaglio ?? "",
-    prezzo_10: product.prezzo_10 ?? "",
-    prezzo_20: product.prezzo_20 ?? "",
-    prezzo_50: product.prezzo_50 ?? "",
-    prezzo_100: product.prezzo_100 ?? "",
-    prezzo_100_plus: product.prezzo_100_plus ?? ""
-  };
-
-  const { data, error } = await supabase
-    .from("products_catalog")
-    .insert(payload)
-    .select("*")
-    .single();
-
-  if (error) throw error;
-  return data;
-}
-// ===== PRODUCTS (catalogo) CRUD =====
-
-export async function fetchProducts() {
-  const { data, error } = await supabase
-    .from("products_catalog")
-    .select("*")
-    .order("created_at", { ascending: false });
-
-  if (error) throw error;
-  return data || [];
-}
-
-export async function insertProduct(product) {
-  const payload = {
-    nome: product.nome ?? "",
-    immagine: product.immagine ?? "",
-    prezzo_dettaglio: product.prezzo_dettaglio ?? "",
-    prezzo_10: product.prezzo_10 ?? "",
-    prezzo_20: product.prezzo_20 ?? "",
-    prezzo_50: product.prezzo_50 ?? "",
-    prezzo_100: product.prezzo_100 ?? "",
-    prezzo_100_plus: product.prezzo_100_plus ?? ""
+    nome: product?.nome ?? "",
+    immagine: product?.immagine ?? "",
+    prezzo_dettaglio: product?.prezzo_dettaglio ?? "",
+    prezzo_10: product?.prezzo_10 ?? "",
+    prezzo_20: product?.prezzo_20 ?? "",
+    prezzo_50: product?.prezzo_50 ?? "",
+    prezzo_100: product?.prezzo_100 ?? "",
+    prezzo_100_plus: product?.prezzo_100_plus ?? ""
   };
 
   const { data, error } = await supabase
@@ -173,14 +125,14 @@ export async function updateProduct(product) {
   if (!product?.id) throw new Error("updateProduct: missing id");
 
   const payload = {
-    nome: product.nome ?? "",
-    immagine: product.immagine ?? "",
-    prezzo_dettaglio: product.prezzo_dettaglio ?? "",
-    prezzo_10: product.prezzo_10 ?? "",
-    prezzo_20: product.prezzo_20 ?? "",
-    prezzo_50: product.prezzo_50 ?? "",
-    prezzo_100: product.prezzo_100 ?? "",
-    prezzo_100_plus: product.prezzo_100_plus ?? ""
+    nome: product?.nome ?? "",
+    immagine: product?.immagine ?? "",
+    prezzo_dettaglio: product?.prezzo_dettaglio ?? "",
+    prezzo_10: product?.prezzo_10 ?? "",
+    prezzo_20: product?.prezzo_20 ?? "",
+    prezzo_50: product?.prezzo_50 ?? "",
+    prezzo_100: product?.prezzo_100 ?? "",
+    prezzo_100_plus: product?.prezzo_100_plus ?? ""
   };
 
   const { data, error } = await supabase
