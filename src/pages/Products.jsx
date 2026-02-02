@@ -6,6 +6,14 @@ import ProductImageModal from "../components/ProductImageModal";
 
 import { fetchProducts, insertProduct, updateProduct, deleteProduct } from "../utils/supabase";
 
+function formatSbError(e) {
+  // Supabase di solito fornisce message/details/hint
+  const msg = e?.message || "Errore sconosciuto";
+  const details = e?.details ? `\nDettagli: ${e.details}` : "";
+  const hint = e?.hint ? `\nHint: ${e.hint}` : "";
+  return `${msg}${details}${hint}`;
+}
+
 export default function Products({ user, onLogout }) {
   const isAdmin = user?.role === "admin";
 
@@ -21,8 +29,8 @@ export default function Products({ user, onLogout }) {
       const data = await fetchProducts();
       setProducts(data);
     } catch (e) {
-      console.error(e);
-      alert("Errore caricamento catalogo prodotti.");
+      console.error("FETCH PRODUCTS ERROR:", e);
+      alert("Errore caricamento catalogo prodotti:\n" + formatSbError(e));
     } finally {
       setLoading(false);
     }
@@ -41,8 +49,8 @@ export default function Products({ user, onLogout }) {
       await load();
       setEditing(null);
     } catch (e) {
-      console.error(e);
-      alert("Errore salvataggio prodotto (controlla policy Supabase).");
+      console.error("SAVE PRODUCT ERROR:", e);
+      alert("Errore salvataggio prodotto:\n" + formatSbError(e));
     } finally {
       setLoading(false);
     }
@@ -57,8 +65,8 @@ export default function Products({ user, onLogout }) {
       await deleteProduct(id);
       await load();
     } catch (e) {
-      console.error(e);
-      alert("Errore eliminazione prodotto (controlla policy Supabase).");
+      console.error("DELETE PRODUCT ERROR:", e);
+      alert("Errore eliminazione prodotto:\n" + formatSbError(e));
     } finally {
       setLoading(false);
     }
@@ -106,11 +114,9 @@ export default function Products({ user, onLogout }) {
 
         {loading && <div className="mb-3 text-gray-500">Caricamento...</div>}
 
-        {/* ELENCO */}
         <div className="space-y-3">
           {filtered.map((p) => (
             <div key={p.id} className="p-3 border rounded bg-gray-50 flex items-start gap-3">
-              {/* Immagine sx */}
               <div
                 className="relative rounded overflow-hidden border bg-white flex-shrink-0"
                 style={{ width: thumbSize, height: thumbSize }}
@@ -141,7 +147,6 @@ export default function Products({ user, onLogout }) {
                 )}
               </div>
 
-              {/* Dettagli dx */}
               <div className="flex-1">
                 <div className="flex items-start justify-between gap-3">
                   <div>
