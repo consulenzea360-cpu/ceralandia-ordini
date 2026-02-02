@@ -135,8 +135,43 @@ export async function insertProduct(product) {
   if (error) throw error;
   return data;
 }
+// ===== PRODUCTS (catalogo) CRUD =====
+
+export async function fetchProducts() {
+  const { data, error } = await supabase
+    .from("products_catalog")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function insertProduct(product) {
+  const payload = {
+    nome: product.nome ?? "",
+    immagine: product.immagine ?? "",
+    prezzo_dettaglio: product.prezzo_dettaglio ?? "",
+    prezzo_10: product.prezzo_10 ?? "",
+    prezzo_20: product.prezzo_20 ?? "",
+    prezzo_50: product.prezzo_50 ?? "",
+    prezzo_100: product.prezzo_100 ?? "",
+    prezzo_100_plus: product.prezzo_100_plus ?? ""
+  };
+
+  const { data, error } = await supabase
+    .from("products_catalog")
+    .insert(payload)
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return data;
+}
 
 export async function updateProduct(product) {
+  if (!product?.id) throw new Error("updateProduct: missing id");
+
   const payload = {
     nome: product.nome ?? "",
     immagine: product.immagine ?? "",
