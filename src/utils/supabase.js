@@ -104,6 +104,16 @@ export async function fetchProducts() {
   return data || [];
 }
 
+export async function fetchProducts() {
+  const { data, error } = await supabase
+    .from("products_catalog")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
 export async function insertProduct(product) {
   const payload = {
     nome: product.nome ?? "",
@@ -117,7 +127,7 @@ export async function insertProduct(product) {
   };
 
   const { data, error } = await supabase
-    .from("products")
+    .from("products_catalog")
     .insert(payload)
     .select("*")
     .single();
@@ -127,8 +137,6 @@ export async function insertProduct(product) {
 }
 
 export async function updateProduct(product) {
-  if (!product?.id) throw new Error("updateProduct: missing id");
-
   const payload = {
     nome: product.nome ?? "",
     immagine: product.immagine ?? "",
@@ -141,7 +149,7 @@ export async function updateProduct(product) {
   };
 
   const { data, error } = await supabase
-    .from("products")
+    .from("products_catalog")
     .update(payload)
     .eq("id", product.id)
     .select("*")
@@ -152,6 +160,6 @@ export async function updateProduct(product) {
 }
 
 export async function deleteProduct(id) {
-  const { error } = await supabase.from("products").delete().eq("id", id);
+  const { error } = await supabase.from("products_catalog").delete().eq("id", id);
   if (error) throw error;
 }
