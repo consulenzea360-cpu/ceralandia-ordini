@@ -5,8 +5,24 @@ import { supabase } from "../utils/supabase";
 const LOCAL_USERS = ["ambra", "salvo", "franco", "ignazio", "alessandro"];
 const LOCAL_PASSWORD = "Ceralandia!2025";
 
+// ✅ chiave dedicata SOLO per gli utenti locali
+const LOCAL_USER_KEY = "ceralandia_local_user_v1";
+
 export function useAuth() {
-  const [user, setUser] = useState(null);
+  // ✅ re-hydrate immediato: così con F5 l'utente locale resta loggato
+  const [user, setUser] = useState(() => {
+    try {
+      const raw = localStorage.getItem(LOCAL_USER_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      // forma minima attesa: { username, role: "user" }
+      if (parsed?.username && parsed?.role === "user") return parsed;
+      return null;
+    } catch {
+      return null;
+    }
+  });
+
   const [loading, setLoading] = useState(true);
 
   // Controlla eventuale sessione admin Supabase
@@ -17,6 +33,7 @@ export function useAuth() {
       } = await supabase.auth.getSession();
 
       if (session?.user) {
+        // ✅ se c'è admin, prevale sempre su locale
         setUser({
           username: "admin",
           role: "admin",
@@ -29,44 +46,52 @@ export function useAuth() {
 
     loadSession();
 
-   // Listener sessione Supabase
-const { data: listener } = supabase.auth.onAuthStateChange(
-  (_event, session) => {
-    if (session?.user) {
-      // admin autenticato tramite Supabase
-      setUser({
-        username: "admin",
-        role: "admin",
-        supabaseUser: session.user,
-      });
-    }
+    // Listener sessione Supabase
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        // admin autenticato tramite Supabase
+        setUser({
+          username: "admin",
+          role: "admin",
+          supabaseUser: session.user,
+        });
+      }
 
-    // ❗ IMPORTANTE:
-    // NON aggiungere else { setUser(null) }
-    // Altrimenti gli utenti locali verrebbero sloggati
-  }
-);
-
+      // ❗ IMPORTANTE:
+      // NON aggiungere else { setUser(null) }
+      // Altrimenti gli utenti locali verrebbero sloggati
+    });
 
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // Login locale o admin
+  // Login locale
   function loginLocal(username, password) {
-    if (LOCAL_USERS.includes(username.toLowerCase()) && password === LOCAL_PASSWORD) {
-      setUser({ username, role: "user" });
+    const u = (username || "").trim().toLowerCase();
+
+    if (LOCAL_USERS.includes(u) && password === LOCAL_PASSWORD) {
+      const localUser = { username: u, role: "user" };
+      setUser(localUser);
+      // ✅ persistenza
+      localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(localUser));
       return true;
     }
     return false;
   }
 
-  // Login admin da Supabase
+  // Login admin da Supabase (lo lasciamo com'è)
   function loginAdmin(adminUser) {
+    // ✅ se entra admin, puliamo eventuale locale salvato
+    localStorage.removeItem(LOCAL_USER_KEY);
     setUser({ username: "admin", role: "admin", supabaseUser: adminUser });
   }
 
   async function logout() {
-    await supabase.auth.signOut();
+    // ✅ se sei admin fai signOut supabase, se sei locale no
+    if (user?.role === "admin") {
+      await supabase.auth.signOut();
+    }
+    localStorage.removeItem(LOCAL_USER_KEY);
     setUser(null);
   }
 
