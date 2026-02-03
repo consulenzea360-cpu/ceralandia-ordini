@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import StatusLed from "./StatusLed";
 
 export default function OrderList({
@@ -9,24 +9,12 @@ export default function OrderList({
   onEdit,
   onChangeStatus,
   onDelete,
-  isAdmin = false
+  isAdmin = false,
 }) {
   // popup conferma consegnato
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, setPending] = useState(null);
   // pending = { id, prevStatus }
-
-  // 🔍 FILTRO RICERCA (usa search esterna → persistente)
-  const filteredOrders = useMemo(() => {
-    const q = (search || "").toLowerCase().trim();
-    if (!q) return orders;
-
-    return orders.filter(
-      (o) =>
-        (o.cliente || "").toLowerCase().includes(q) ||
-        (o.telefono || "").toLowerCase().includes(q)
-    );
-  }, [orders, search]);
 
   const handleStatusChange = (order, nextStatus) => {
     if (!onChangeStatus) return;
@@ -49,7 +37,6 @@ export default function OrderList({
   };
 
   const confirmNo = () => {
-    // nessuna azione → stato resta invariato
     setConfirmOpen(false);
     setPending(null);
   };
@@ -64,12 +51,12 @@ export default function OrderList({
 
   return (
     <div>
-      {/* 🔍 BARRA RICERCA */}
+      {/* 🔍 BARRA RICERCA (la logica di filtro è nel componente padre Orders.jsx) */}
       <div className="mb-4 flex gap-2">
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Cerca per cliente o telefono"
+          placeholder="Cerca per cliente, telefono o prodotto"
           className="flex-1 p-2 border rounded"
         />
         <button onClick={() => setSearch("")} className="btn-small">
@@ -77,9 +64,9 @@ export default function OrderList({
         </button>
       </div>
 
-      {/* 📋 LISTA ORDINI */}
+      {/* 📋 LISTA ORDINI (orders è già filtrato dal padre) */}
       <div className="space-y-3">
-        {filteredOrders.map((o) => (
+        {orders.map((o) => (
           <div
             key={o.id}
             className="p-3 border rounded flex items-center justify-between bg-gray-50"
