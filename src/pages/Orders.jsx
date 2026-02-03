@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Navbar from "../components/Navbar";
 import OrderList from "../components/OrderList";
 import OrderForm from "../components/OrderForm";
@@ -78,7 +78,7 @@ function ordersToCSV(orders) {
     "lavoratore",
     "stato",
     "consegna_iso",
-    "prodotti_json"
+    "prodotti_json",
   ];
 
   const lines = [headers.map(toCSVCell).join(",")];
@@ -93,7 +93,7 @@ function ordersToCSV(orders) {
         o.lavoratore ?? "",
         o.stato ?? "",
         o.consegna ? new Date(o.consegna).toISOString() : "",
-        JSON.stringify(o.prodotti ?? [])
+        JSON.stringify(o.prodotti ?? []),
       ]
         .map(toCSVCell)
         .join(",")
@@ -140,12 +140,46 @@ function csvToOrders(csvText) {
       lavoratore: iLavoratore >= 0 ? row[iLavoratore] : "",
       stato: iStato >= 0 ? row[iStato] : "da_prendere",
       consegna,
-      prodotti
+      prodotti,
     });
   }
 
   return out;
 }
+
+/** ✅ Normalizzazione: case-insensitive + accenti-insensitive + spazi */
+const normalize = (value = "") =>
+  String(value)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // rimuove accenti
+    .replace(/\s+/g, " ")
+    .trim();
+
+/** ✅ Estrae un testo “ricercabile” dai prodotti dell’ordine */
+const extractProductText = (order) => {
+  const prodotti = Array.isArray(order?.prodotti) ? order.prodotti : [];
+
+  // Prova più campi possibili, così funziona anche con ordini vecchi/non uniformi
+  return prodotti
+    .map((p) => {
+      if (typeof p === "string") return p;
+
+      return (
+        p?.nome ||
+        p?.name ||
+        p?.titolo ||
+        p?.title ||
+        p?.prodotto ||
+        p?.product ||
+        p?.descrizione ||
+        p?.description ||
+        ""
+      );
+    })
+    .filter(Boolean)
+    .join(" ");
+};
 
 export default function Orders({ user, onLogout }) {
   const isAdmin = user?.role === "admin";
@@ -206,7 +240,7 @@ export default function Orders({ user, onLogout }) {
       lavoratore: who,
       prodotti: [],
       stato: "da_prendere",
-      consegna: null
+      consegna: null,
     });
 
     setView("form");
@@ -269,6 +303,30 @@ export default function Orders({ user, onLogout }) {
       setLoading(false);
     }
   }
+
+  /** ✅ FILTRO SEARCH: include anche nomi prodotti dentro "prodotti" */
+  const filteredOrders = useMemo(() => {
+    const q = normalize(search);
+    if (!q) return orders;
+
+    return orders.filter((o) => {
+      const text = normalize(
+        [
+          o?.id,
+          o?.cliente,
+          o?.telefono,
+          o?.operatore,
+          o?.lavoratore,
+          o?.stato,
+          extractProductText(o), // 🔥 prodotti dell’ordine
+        ]
+          .filter(Boolean)
+          .join(" ")
+      );
+
+      return text.includes(q);
+    });
+  }, [orders, search]);
 
   /** ===== EXPORT / IMPORT CSV (solo admin) ===== */
   async function handleExportCSV() {
@@ -392,7 +450,7 @@ export default function Orders({ user, onLogout }) {
               )}
 
               <OrderList
-                orders={orders}
+                orders={filteredOrders}   {/* ✅ qui passiamo già filtrati */}
                 search={search}
                 setSearch={setSearch}
                 onEdit={handleEdit}
