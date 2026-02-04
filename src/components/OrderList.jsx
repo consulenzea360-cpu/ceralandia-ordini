@@ -14,7 +14,6 @@ export default function OrderList({
   // popup conferma consegnato
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, setPending] = useState(null);
-  // pending = { id, prevStatus }
 
   const handleStatusChange = (order, nextStatus) => {
     if (!onChangeStatus) return;
@@ -29,9 +28,7 @@ export default function OrderList({
   };
 
   const confirmYes = () => {
-    if (pending) {
-      onChangeStatus(pending.id, "consegnato");
-    }
+    if (pending) onChangeStatus(pending.id, "consegnato");
     setConfirmOpen(false);
     setPending(null);
   };
@@ -41,17 +38,9 @@ export default function OrderList({
     setPending(null);
   };
 
-  if (!orders.length) {
-    return (
-      <div className="py-8 text-center text-gray-500">
-        Nessun ordine presente.
-      </div>
-    );
-  }
-
   return (
     <div>
-      {/* 🔍 BARRA RICERCA (la logica di filtro è nel componente padre Orders.jsx) */}
+      {/* 🔍 BARRA RICERCA (sempre visibile) */}
       <div className="mb-4 flex gap-2">
         <input
           value={search}
@@ -64,67 +53,71 @@ export default function OrderList({
         </button>
       </div>
 
-      {/* 📋 LISTA ORDINI (orders è già filtrato dal padre) */}
-      <div className="space-y-3">
-        {orders.map((o) => (
-          <div
-            key={o.id}
-            className="p-3 border rounded flex items-center justify-between bg-gray-50"
-          >
-            {/* INFO */}
-            <div>
-              <div className="font-medium">{o.cliente || "-"}</div>
-              <div className="text-sm text-gray-600">
-                Tel: {o.telefono || "-"} • Consegna:{" "}
-                {o.consegna ? new Date(o.consegna).toLocaleDateString() : "-"}
+      {/* ✅ Se non ci sono risultati, mostro messaggio ma NON nascondo la search */}
+      {orders.length === 0 ? (
+        <div className="py-6 text-center text-gray-500">
+          {search?.trim()
+            ? "Nessun ordine corrisponde alla ricerca."
+            : "Nessun ordine presente."}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {orders.map((o) => (
+            <div
+              key={o.id}
+              className="p-3 border rounded flex items-center justify-between bg-gray-50"
+            >
+              {/* INFO */}
+              <div>
+                <div className="font-medium">{o.cliente || "-"}</div>
+                <div className="text-sm text-gray-600">
+                  Tel: {o.telefono || "-"} • Consegna:{" "}
+                  {o.consegna ? new Date(o.consegna).toLocaleDateString() : "-"}
+                </div>
+              </div>
+
+              {/* AZIONI */}
+              <div className="flex items-center gap-3">
+                <StatusLed status={o.stato} />
+
+                {onView && (
+                  <button onClick={() => onView(o)} className="btn-small">
+                    👁️
+                  </button>
+                )}
+
+                {onChangeStatus && (
+                  <select
+                    className="border p-1 rounded"
+                    value={o.stato}
+                    onChange={(e) => handleStatusChange(o, e.target.value)}
+                  >
+                    <option value="da_prendere">Da prendere</option>
+                    <option value="in_lavorazione">In lavorazione</option>
+                    <option value="pronto">Completato</option>
+                    <option value="consegnato">Consegnato</option>
+                  </select>
+                )}
+
+                {onEdit && (
+                  <button onClick={() => onEdit(o)} className="btn-small">
+                    ✏️
+                  </button>
+                )}
+
+                {isAdmin && onDelete && (
+                  <button
+                    onClick={() => onDelete(o.id)}
+                    className="px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700"
+                  >
+                    🗑️
+                  </button>
+                )}
               </div>
             </div>
-
-            {/* AZIONI */}
-            <div className="flex items-center gap-3">
-              <StatusLed status={o.stato} />
-
-              {/* 👁️ VISUALIZZA */}
-              {onView && (
-                <button onClick={() => onView(o)} className="btn-small">
-                  👁️
-                </button>
-              )}
-
-              {/* SELECT STATO */}
-              {onChangeStatus && (
-                <select
-                  className="border p-1 rounded"
-                  value={o.stato}
-                  onChange={(e) => handleStatusChange(o, e.target.value)}
-                >
-                  <option value="da_prendere">Da prendere</option>
-                  <option value="in_lavorazione">In lavorazione</option>
-                  <option value="pronto">Completato</option>
-                  <option value="consegnato">Consegnato</option>
-                </select>
-              )}
-
-              {/* ✏️ MODIFICA — abilitata per tutti */}
-              {onEdit && (
-                <button onClick={() => onEdit(o)} className="btn-small">
-                  ✏️
-                </button>
-              )}
-
-              {/* 🗑️ ELIMINA — solo admin */}
-              {isAdmin && onDelete && (
-                <button
-                  onClick={() => onDelete(o.id)}
-                  className="px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700"
-                >
-                  🗑️
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* 🔔 POPUP CONFERMA CONSEGNATO */}
       {confirmOpen && (
