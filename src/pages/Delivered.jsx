@@ -1,159 +1,64 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Navbar from "../components/Navbar";
-import DeliveredList from "../components/DeliveredList";
-import OrderForm from "../components/OrderForm";
+import OrderList from "../components/OrderList";
 import OrderView from "../components/OrderView";
 import Footer from "../components/Footer";
 
-import {
-  fetchOrders,
-  updateOrder,
-  deleteOrder,
-  insertOrder
-} from "../utils/supabase";
+import { fetchOrders, updateOrder, deleteOrder } from "../utils/supabase";
 
-/* ===================== CSV helpers ===================== */
-function parseCSV(text) {
-  const rows = [];
-  let row = [];
-  let field = "";
-  let inQuotes = false;
+/** ===== SEARCH helpers (uguali a Orders.jsx) ===== */
+const normalize = (value = "") =>
+  String(value)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    const next = text[i + 1];
-
-    if (inQuotes) {
-      if (c === '"' && next === '"') {
-        field += '"';
-        i++;
-      } else if (c === '"') {
-        inQuotes = false;
-      } else {
-        field += c;
-      }
-    } else {
-      if (c === '"') inQuotes = true;
-      else if (c === ",") {
-        row.push(field);
-        field = "";
-      } else if (c === "\n") {
-        row.push(field);
-        rows.push(row);
-        row = [];
-        field = "";
-      } else if (c === "\r") {
-        // ignore
-      } else {
-        field += c;
-      }
-    }
-  }
-
-  row.push(field);
-  rows.push(row);
-
-  return rows.filter((r) => r.some((x) => String(x || "").trim() !== ""));
-}
-
-function toCSVCell(value) {
-  const s = value === null || value === undefined ? "" : String(value);
-  return `"${s.replace(/"/g, '""')}"`;
-}
-
-function downloadCSV(csvText, filename) {
-  const bom = "\uFEFF"; // Excel UTF-8
-  const blob = new Blob([bom + csvText], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-
-  URL.revokeObjectURL(url);
-}
-
-function ordersToCSV(orders) {
-  const headers = [
-    "id",
-    "cliente",
-    "telefono",
-    "operatore",
-    "lavoratore",
-    "stato",
-    "consegna_iso",
-    "prodotti_json"
-  ];
-
-  const lines = [headers.map(toCSVCell).join(",")];
-
-  for (const o of orders) {
-    lines.push(
-      [
-        o.id ?? "",
-        o.cliente ?? "",
-        o.telefono ?? "",
-        o.operatore ?? "",
-        o.lavoratore ?? "",
-        o.stato ?? "",
-        o.consegna ? new Date(o.consegna).toISOString() : "",
-        JSON.stringify(o.prodotti ?? [])
-      ]
-        .map(toCSVCell)
-        .join(",")
-    );
-  }
-
-  return lines.join("\n");
-}
-
-function csvToOrders(csvText) {
-  const rows = parseCSV(csvText);
-  if (!rows.length) return [];
-
-  const header = rows[0].map((h) => String(h).trim());
-  const idx = (name) => header.indexOf(name);
-
-  const iCliente = idx("cliente");
-  const iTelefono = idx("telefono");
-  const iOperatore = idx("operatore");
-  const iLavoratore = idx("lavoratore");
-  const iStato = idx("stato");
-  const iConsegna = idx("consegna_iso");
-  const iProdotti = idx("prodotti_json");
-
-  const out = [];
-  for (let r = 1; r < rows.length; r++) {
-    const row = rows[r];
-
-    const prodottiRaw = iProdotti >= 0 ? row[iProdotti] : "[]";
-    let prodotti = [];
+const coerceProdottiArray = (prodotti) => {
+  if (Array.isArray(prodotti)) return prodotti;
+  if (typeof prodotti === "string") {
+    const s = prodotti.trim();
+    if (!s) return [];
     try {
-      prodotti = prodottiRaw ? JSON.parse(prodottiRaw) : [];
+      const parsed = JSON.parse(s);
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed && Array.isArray(parsed.items)) return parsed.items;
+      return [];
     } catch {
-      prodotti = [];
+      return [s];
     }
-
-    const consegnaIso = iConsegna >= 0 ? row[iConsegna] : "";
-    const consegna = consegnaIso ? new Date(consegnaIso).toISOString() : null;
-
-    out.push({
-      cliente: iCliente >= 0 ? row[iCliente] : "",
-      telefono: iTelefono >= 0 ? row[iTelefono] : "",
-      operatore: iOperatore >= 0 ? row[iOperatore] : "",
-      lavoratore: iLavoratore >= 0 ? row[iLavoratore] : "",
-      stato: iStato >= 0 ? row[iStato] : "consegnato",
-      consegna,
-      prodotti
-    });
   }
+  if (prodotti && typeof prodotti === "object") return [prodotti];
+  return [];
+};
 
-  return out;
-}
-/* ======================================================= */
+const extractProductText = (order) => {
+  const arr = coerceProdottiArray(order?.prodotti);
+
+  const names = arr
+    .map((p) => {
+      if (typeof p === "string") return p;
+      return (
+        p?.nome ||
+        p?.name ||
+        p?.titolo ||
+        p?.title ||
+        p?.prodotto ||
+        p?.product ||
+        p?.descrizione ||
+        p?.description ||
+        p?.categoria ||
+        p?.variant ||
+        ""
+      );
+    })
+    .filter(Boolean)
+    .join(" ");
+
+  const fallbackJson = arr.length ? JSON.stringify(arr) : "";
+  return `${names} ${fallbackJson}`.trim();
+};
 
 export default function Delivered({ user, onLogout }) {
   const isAdmin = user?.role === "admin";
@@ -161,23 +66,24 @@ export default function Delivered({ user, onLogout }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const [view, setView] = useState("list"); // list | view | form
-  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [view, setView] = useState("list"); // list | view
+  const [viewing, setViewing] = useState(null);
 
-  // ✅ search persistente
   const [search, setSearch] = useState("");
 
-  // ✅ scroll persistente
-  const lastScrollYRef = useRef(0);
+  // ✅ filtro operatore
+  const [operatorFilter, setOperatorFilter] = useState("ALL");
 
-  // ✅ import input
-  const importInputRef = useRef(null);
+  const lastScrollYRef = useRef(0);
 
   async function load() {
     setLoading(true);
     try {
       const data = await fetchOrders({ deliveredFlag: true });
       setOrders(data);
+    } catch (e) {
+      console.error(e);
+      alert("Errore caricamento ordini consegnati.");
     } finally {
       setLoading(false);
     }
@@ -187,127 +93,75 @@ export default function Delivered({ user, onLogout }) {
     load();
   }, []);
 
-  function handleView(order) {
-    lastScrollYRef.current = window.scrollY;
-    setSelectedOrder(order);
-    setView("view");
-  }
-
-  function handleEdit(order) {
-    if (!isAdmin) {
-      alert("Solo l'admin può modificare un ordine consegnato.");
-      return;
+  const operatorOptions = useMemo(() => {
+    const set = new Set();
+    for (const o of orders) {
+      if (o?.operatore) set.add(o.operatore);
     }
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "it"));
+  }, [orders]);
 
-    lastScrollYRef.current = window.scrollY;
-    setSelectedOrder(order);
-    setView("form");
-  }
+  const filteredOrders = useMemo(() => {
+    const q = normalize(search);
 
-  function backToList() {
-    setView("list");
-    setSelectedOrder(null);
+    return orders.filter((o) => {
+      const text = normalize(
+        [
+          o?.id,
+          o?.cliente,
+          o?.telefono,
+          o?.operatore,
+          o?.lavoratore,
+          o?.stato,
+          extractProductText(o),
+        ]
+          .filter(Boolean)
+          .join(" ")
+      );
 
+      const textMatch = !q || text.includes(q);
+
+      const operatorMatch =
+        operatorFilter === "ALL" ||
+        normalize(o?.operatore) === normalize(operatorFilter);
+
+      return textMatch && operatorMatch;
+    });
+  }, [orders, search, operatorFilter]);
+
+  function restoreScroll() {
     requestAnimationFrame(() => {
       window.scrollTo({ top: lastScrollYRef.current, behavior: "auto" });
     });
   }
 
+  function handleView(order) {
+    lastScrollYRef.current = window.scrollY;
+    setViewing(order);
+    setView("view");
+  }
+
+  function handleCloseView() {
+    setView("list");
+    setViewing(null);
+    restoreScroll();
+  }
+
   async function handleDelete(id) {
     if (!isAdmin) return alert("Solo l'admin può eliminare gli ordini.");
-    if (!window.confirm("Vuoi davvero eliminare questo ordine?")) return;
+    if (!window.confirm("Sei sicuro di voler eliminare questo ordine?")) return;
 
+    setLoading(true);
     try {
       await deleteOrder(id);
       await load();
     } catch (err) {
       console.error(err);
-      alert("Errore eliminazione ordine.");
-    }
-  }
-
-  async function handleSave(order) {
-    try {
-      await updateOrder(order);
-      await load();
-      backToList();
-    } catch (err) {
-      console.error(err);
-      alert("Errore salvataggio ordine.");
-    }
-  }
-
-  /* ===== EXPORT / IMPORT (solo admin) ===== */
-  async function handleExportCSV() {
-    if (!isAdmin) return;
-
-    setLoading(true);
-    try {
-      const all = await fetchOrders({ deliveredFlag: true });
-      const csv = ordersToCSV(all);
-
-      const d = new Date();
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      const dd = String(d.getDate()).padStart(2, "0");
-
-      downloadCSV(csv, `ordini-consegnati_${yyyy}-${mm}-${dd}.csv`);
-    } catch (e) {
-      console.error(e);
-      alert("Errore export CSV.");
+      alert("Errore durante l'eliminazione.");
     } finally {
       setLoading(false);
     }
   }
-
-  function handleImportClick() {
-    if (!isAdmin) return;
-    importInputRef.current?.click();
-  }
-
-async function handleImportFile(e) {
-  if (!isAdmin) return;
-
-  const file = e.target.files?.[0];
-  e.target.value = "";
-  if (!file) return;
-
-  setLoading(true);
-  try {
-    const text = await file.text();
-    const importedOrders = csvToOrders(text);
-
-    const count = importedOrders.length;
-
-    if (!count) {
-      alert("Il CSV sembra vuoto oppure non contiene ordini importabili.");
-      return;
-    }
-
-    const ok = window.confirm(
-      `Stai per importare ${count} ordini consegnati.\n\n` +
-      `ATTENZIONE: questa operazione sovrascrive gli ordini consegnati (cancella quelli attuali e importa quelli del CSV).\n\n` +
-      `Continuare?`
-    );
-    if (!ok) return;
-
-    const current = await fetchOrders({ deliveredFlag: true });
-    await Promise.all(current.map((o) => deleteOrder(o.id)));
-
-    for (const o of importedOrders) {
-      // sicurezza: consegnati restano consegnati
-      await insertOrder({ ...o, stato: "consegnato" });
-    }
-
-    await load();
-    alert("Import CSV completato.");
-  } catch (err) {
-    console.error(err);
-    alert("Errore import CSV. Controlla che il file sia un export del sistema.");
-  } finally {
-    setLoading(false);
-  }
-}
 
   return (
     <div className="main-content">
@@ -315,58 +169,45 @@ async function handleImportFile(e) {
         <Navbar onLogout={onLogout} />
 
         <div className="container-max mx-auto p-6">
-          <h2 className="text-2xl font-bold mb-4">Ordini Consegnati</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold">Ordini consegnati</h2>
+          </div>
 
           {loading && <div className="mb-3 text-gray-500">Caricamento...</div>}
 
           {view === "list" && (
-            <>   {isAdmin && (
-                <div className="mb-3 flex gap-4 text-sm">
-                  <button
-                    type="button"
-                    className="underline text-gray-700 hover:text-gray-900"
-                    onClick={handleExportCSV}
-                  >
-                    Esporta CSV
-                  </button>
+            <OrderList
+              orders={filteredOrders}
+              search={search}
+              setSearch={setSearch}
+              operatorFilter={operatorFilter}
+              setOperatorFilter={setOperatorFilter}
+              operatorOptions={operatorOptions}
+              onView={handleView}
+              onDelete={handleDelete}
+              isAdmin={isAdmin}
+              onChangeStatus={async (id, stato) => {
+                const ord = orders.find((o) => o.id === id);
+                if (!ord) return;
 
-                  <button
-                    type="button"
-                    className="underline text-gray-700 hover:text-gray-900"
-                    onClick={handleImportClick}
-                  >
-                    Importa CSV
-                  </button>
-
-                  <input
-                    ref={importInputRef}
-                    type="file"
-                    accept=".csv,text/csv"
-                    className="hidden"
-                    onChange={handleImportFile}
-                  />
-                </div>
-              )}
-              <DeliveredList
-                orders={orders}
-                search={search}
-                setSearch={setSearch}
-                onView={handleView}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                isAdmin={isAdmin}
-              />
-
-           
-            </>
+                await updateOrder({ ...ord, stato });
+                await load();
+              }}
+            />
           )}
 
-          {view === "view" && selectedOrder && (
-            <OrderView order={selectedOrder} onClose={backToList} />
-          )}
+          {view === "view" && viewing && (
+            <OrderView
+              order={viewing}
+              onClose={handleCloseView}
+              onChangeStatus={async (id, stato) => {
+                const ord = orders.find((o) => o.id === id);
+                if (!ord) return;
 
-          {view === "form" && selectedOrder && (
-            <OrderForm initial={selectedOrder} onSave={handleSave} onCancel={backToList} />
+                await updateOrder({ ...ord, stato });
+                await load();
+              }}
+            />
           )}
         </div>
 

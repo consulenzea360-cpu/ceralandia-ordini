@@ -147,24 +147,17 @@ function csvToOrders(csvText) {
   return out;
 }
 
-/** =========================
- * ✅ SEARCH helpers
- * - case-insensitive
- * - accent-insensitive
- * - robusto su prodotti (array / string json / oggetto / string)
- * ========================= */
+/** ===== SEARCH helpers ===== */
 const normalize = (value = "") =>
   String(value)
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // rimuove accenti
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/\s+/g, " ")
     .trim();
 
 const coerceProdottiArray = (prodotti) => {
   if (Array.isArray(prodotti)) return prodotti;
-
-  // spesso può essere una stringa JSON: '[{"nome":"Candele Battesimo"}]'
   if (typeof prodotti === "string") {
     const s = prodotti.trim();
     if (!s) return [];
@@ -174,14 +167,10 @@ const coerceProdottiArray = (prodotti) => {
       if (parsed && Array.isArray(parsed.items)) return parsed.items;
       return [];
     } catch {
-      // se non è JSON valido, lo tratto come testo semplice
       return [s];
     }
   }
-
-  // oggetto singolo
   if (prodotti && typeof prodotti === "object") return [prodotti];
-
   return [];
 };
 
@@ -191,7 +180,6 @@ const extractProductText = (order) => {
   const names = arr
     .map((p) => {
       if (typeof p === "string") return p;
-
       return (
         p?.nome ||
         p?.name ||
@@ -209,9 +197,7 @@ const extractProductText = (order) => {
     .filter(Boolean)
     .join(" ");
 
-  // fallback super-robusto: cerca anche dentro tutto il json
   const fallbackJson = arr.length ? JSON.stringify(arr) : "";
-
   return `${names} ${fallbackJson}`.trim();
 };
 
@@ -225,13 +211,12 @@ export default function Orders({ user, onLogout }) {
   const [editing, setEditing] = useState(null);
   const [viewing, setViewing] = useState(null);
 
-  // ✅ SEARCH (serve per non bloccare l’input in OrderList)
   const [search, setSearch] = useState("");
 
-  // ✅ scroll persistente
-  const lastScrollYRef = useRef(0);
+  // ✅ nuovo filtro operatore
+  const [operatorFilter, setOperatorFilter] = useState("ALL");
 
-  // ✅ import input
+  const lastScrollYRef = useRef(0);
   const importInputRef = useRef(null);
 
   async function load() {
@@ -251,10 +236,18 @@ export default function Orders({ user, onLogout }) {
     load();
   }, []);
 
-  /** ✅ FILTRO SEARCH: include anche nomi prodotti dentro "prodotti" */
+  // ✅ opzioni operatore in base agli ordini caricati
+  const operatorOptions = useMemo(() => {
+    const set = new Set();
+    for (const o of orders) {
+      if (o?.operatore) set.add(o.operatore);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "it"));
+  }, [orders]);
+
+  // ✅ filtro combinato: search + prodotti + operatore
   const filteredOrders = useMemo(() => {
     const q = normalize(search);
-    if (!q) return orders;
 
     return orders.filter((o) => {
       const text = normalize(
@@ -265,15 +258,21 @@ export default function Orders({ user, onLogout }) {
           o?.operatore,
           o?.lavoratore,
           o?.stato,
-          extractProductText(o), // 🔥 prodotti ordine
+          extractProductText(o),
         ]
           .filter(Boolean)
           .join(" ")
       );
 
-      return text.includes(q);
+      const textMatch = !q || text.includes(q);
+
+      const operatorMatch =
+        operatorFilter === "ALL" ||
+        normalize(o?.operatore) === normalize(operatorFilter);
+
+      return textMatch && operatorMatch;
     });
-  }, [orders, search]);
+  }, [orders, search, operatorFilter]);
 
   function restoreScroll() {
     requestAnimationFrame(() => {
@@ -451,10 +450,8 @@ export default function Orders({ user, onLogout }) {
 
           {loading && <div className="mb-3 text-gray-500">Caricamento...</div>}
 
-          {/* ✅ LISTA */}
           {view === "list" && (
             <>
-              {/* ✅ Export/Import all’inizio */}
               {isAdmin && (
                 <div className="mb-3 flex gap-4 text-sm">
                   <button
@@ -483,11 +480,13 @@ export default function Orders({ user, onLogout }) {
                 </div>
               )}
 
-              {/* ✅ Passiamo già gli ordini filtrati */}
               <OrderList
                 orders={filteredOrders}
                 search={search}
                 setSearch={setSearch}
+                operatorFilter={operatorFilter}
+                setOperatorFilter={setOperatorFilter}
+                operatorOptions={operatorOptions}
                 onEdit={handleEdit}
                 onView={handleView}
                 onDelete={handleDelete}
@@ -503,12 +502,10 @@ export default function Orders({ user, onLogout }) {
             </>
           )}
 
-          {/* ✅ FORM */}
           {view === "form" && editing && (
             <OrderForm initial={editing} onSave={handleSave} onCancel={handleCancelForm} />
           )}
 
-          {/* ✅ VIEW */}
           {view === "view" && viewing && (
             <OrderView
               order={viewing}

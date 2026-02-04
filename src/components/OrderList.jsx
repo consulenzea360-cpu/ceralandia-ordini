@@ -5,13 +5,18 @@ export default function OrderList({
   orders = [],
   search = "",
   setSearch = () => {},
+
+  // ✅ nuovo filtro operatore (solo UI)
+  operatorFilter = "ALL",
+  setOperatorFilter = () => {},
+  operatorOptions = [],
+
   onView,
   onEdit,
   onChangeStatus,
   onDelete,
   isAdmin = false,
 }) {
-  // popup conferma consegnato
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, setPending] = useState(null);
 
@@ -40,24 +45,45 @@ export default function OrderList({
 
   return (
     <div>
-      {/* 🔍 BARRA RICERCA (sempre visibile) */}
-      <div className="mb-4 flex gap-2">
+      {/* 🔍 BARRA RICERCA + FILTRO OPERATORE (sempre visibile) */}
+      <div className="mb-4 flex flex-wrap gap-2">
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Cerca per cliente, telefono o prodotto"
-          className="flex-1 p-2 border rounded"
+          className="flex-1 min-w-[220px] p-2 border rounded"
         />
-        <button onClick={() => setSearch("")} className="btn-small">
+
+        <select
+          value={operatorFilter}
+          onChange={(e) => setOperatorFilter(e.target.value)}
+          className="p-2 border rounded min-w-[190px]"
+          title="Filtra per operatore"
+        >
+          <option value="ALL">Tutti gli operatori</option>
+          {operatorOptions.map((op) => (
+            <option key={op} value={op}>
+              {op}
+            </option>
+          ))}
+        </select>
+
+        <button
+          onClick={() => {
+            setSearch("");
+            setOperatorFilter("ALL");
+          }}
+          className="btn-small"
+        >
           Reset
         </button>
       </div>
 
-      {/* ✅ Se non ci sono risultati, mostro messaggio ma NON nascondo la search */}
+      {/* ✅ Nessun risultato: non nascondo la barra */}
       {orders.length === 0 ? (
         <div className="py-6 text-center text-gray-500">
-          {search?.trim()
-            ? "Nessun ordine corrisponde alla ricerca."
+          {search?.trim() || operatorFilter !== "ALL"
+            ? "Nessun ordine corrisponde ai filtri."
             : "Nessun ordine presente."}
         </div>
       ) : (
@@ -71,7 +97,7 @@ export default function OrderList({
               <div>
                 <div className="font-medium">{o.cliente || "-"}</div>
                 <div className="text-sm text-gray-600">
-                  Tel: {o.telefono || "-"} • Consegna:{" "}
+                  Tel: {o.telefono || "-"} • Operatore: {o.operatore || "-"} • Consegna:{" "}
                   {o.consegna ? new Date(o.consegna).toLocaleDateString() : "-"}
                 </div>
               </div>
