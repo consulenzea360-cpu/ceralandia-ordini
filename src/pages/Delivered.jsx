@@ -6,7 +6,10 @@ import Footer from "../components/Footer";
 
 import { fetchOrders, updateOrder, deleteOrder } from "../utils/supabase";
 
-/** ===== SEARCH helpers (uguali a Orders.jsx) ===== */
+/** ✅ ELENCO OPERATORI FISSO (sempre visibile) */
+const OPERATORI = ["ambra", "salvo", "franco", "ignazio", "alessandro", "admin"];
+
+/** ===== SEARCH helpers ===== */
 const normalize = (value = "") =>
   String(value)
     .toLowerCase()
@@ -71,7 +74,6 @@ export default function Delivered({ user, onLogout }) {
 
   const [search, setSearch] = useState("");
 
-  // ✅ filtro operatore
   const [operatorFilter, setOperatorFilter] = useState("ALL");
 
   const lastScrollYRef = useRef(0);
@@ -94,12 +96,15 @@ export default function Delivered({ user, onLogout }) {
   }, []);
 
   const operatorOptions = useMemo(() => {
-    const set = new Set();
-    for (const o of orders) {
-      if (o?.operatore) set.add(o.operatore);
+    const map = new Map();
+    for (const op of OPERATORI) {
+      const label = String(op).trim();
+      if (!label) continue;
+      const key = normalize(label);
+      if (!map.has(key)) map.set(key, label);
     }
-    return Array.from(set).sort((a, b) => a.localeCompare(b, "it"));
-  }, [orders]);
+    return Array.from(map.values()).sort((a, b) => a.localeCompare(b, "it"));
+  }, []);
 
   const filteredOrders = useMemo(() => {
     const q = normalize(search);

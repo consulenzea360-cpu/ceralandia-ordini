@@ -6,7 +6,6 @@ export default function OrderList({
   search = "",
   setSearch = () => {},
 
-  // ✅ nuovo filtro operatore (solo UI)
   operatorFilter = "ALL",
   setOperatorFilter = () => {},
   operatorOptions = [],
@@ -45,7 +44,6 @@ export default function OrderList({
 
   return (
     <div>
-      {/* 🔍 BARRA RICERCA + FILTRO OPERATORE (sempre visibile) */}
       <div className="mb-4 flex flex-wrap gap-2">
         <input
           value={search}
@@ -79,7 +77,6 @@ export default function OrderList({
         </button>
       </div>
 
-      {/* ✅ Nessun risultato: non nascondo la barra */}
       {orders.length === 0 ? (
         <div className="py-6 text-center text-gray-500">
           {search?.trim() || operatorFilter !== "ALL"
@@ -93,7 +90,6 @@ export default function OrderList({
               key={o.id}
               className="p-3 border rounded flex items-center justify-between bg-gray-50"
             >
-              {/* INFO */}
               <div>
                 <div className="font-medium">{o.cliente || "-"}</div>
                 <div className="text-sm text-gray-600">
@@ -102,7 +98,6 @@ export default function OrderList({
                 </div>
               </div>
 
-              {/* AZIONI */}
               <div className="flex items-center gap-3">
                 <StatusLed status={o.stato} />
 
@@ -145,7 +140,6 @@ export default function OrderList({
         </div>
       )}
 
-      {/* 🔔 POPUP CONFERMA CONSEGNATO */}
       {confirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="w-full max-w-sm rounded border bg-white p-4 shadow-lg">
