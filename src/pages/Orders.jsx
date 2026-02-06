@@ -7,8 +7,8 @@ import Footer from "../components/Footer";
 
 import { fetchOrders, insertOrder, updateOrder, deleteOrder } from "../utils/supabase";
 
-/** ✅ ELENCO OPERATORI FISSO (sempre visibile) */
-const OPERATORI = ["ambra", "salvo", "franco", "ignazio", "alessandro", "admin"];
+/** ✅ ELENCO LAVORATORI FISSO (sempre visibile) */
+const LAVORATORI = ["ambra", "salvo", "franco", "ignazio", "alessandro", "admin"];
 
 /** ===== CSV helpers (robusti, con virgolette) ===== */
 function parseCSV(text) {
@@ -216,8 +216,8 @@ export default function Orders({ user, onLogout }) {
 
   const [search, setSearch] = useState("");
 
-  // ✅ filtro operatore
-  const [operatorFilter, setOperatorFilter] = useState("ALL");
+  // ✅ filtro lavoratore
+  const [workerFilter, setWorkerFilter] = useState("ALL");
 
   const lastScrollYRef = useRef(0);
   const importInputRef = useRef(null);
@@ -239,11 +239,11 @@ export default function Orders({ user, onLogout }) {
     load();
   }, []);
 
-  // ✅ opzioni fisse (sempre visibili), “pulite” e senza doppioni
-  const operatorOptions = useMemo(() => {
+  // ✅ opzioni fisse (sempre visibili), pulite senza doppioni
+  const workerOptions = useMemo(() => {
     const map = new Map();
-    for (const op of OPERATORI) {
-      const label = String(op).trim();
+    for (const w of LAVORATORI) {
+      const label = String(w).trim();
       if (!label) continue;
       const key = normalize(label);
       if (!map.has(key)) map.set(key, label);
@@ -271,13 +271,13 @@ export default function Orders({ user, onLogout }) {
 
       const textMatch = !q || text.includes(q);
 
-      const operatorMatch =
-        operatorFilter === "ALL" ||
-        normalize(o?.operatore) === normalize(operatorFilter);
+      const workerMatch =
+        workerFilter === "ALL" ||
+        normalize(o?.lavoratore) === normalize(workerFilter);
 
-      return textMatch && operatorMatch;
+      return textMatch && workerMatch;
     });
-  }, [orders, search, operatorFilter]);
+  }, [orders, search, workerFilter]);
 
   function restoreScroll() {
     requestAnimationFrame(() => {
@@ -456,55 +456,25 @@ export default function Orders({ user, onLogout }) {
           {loading && <div className="mb-3 text-gray-500">Caricamento...</div>}
 
           {view === "list" && (
-            <>
-              {isAdmin && (
-                <div className="mb-3 flex gap-4 text-sm">
-                  <button
-                    type="button"
-                    className="underline text-gray-700 hover:text-gray-900"
-                    onClick={handleExportCSV}
-                  >
-                    Esporta CSV
-                  </button>
+            <OrderList
+              orders={filteredOrders}
+              search={search}
+              setSearch={setSearch}
+              workerFilter={workerFilter}
+              setWorkerFilter={setWorkerFilter}
+              workerOptions={workerOptions}
+              onEdit={handleEdit}
+              onView={handleView}
+              onDelete={handleDelete}
+              isAdmin={isAdmin}
+              onChangeStatus={async (id, stato) => {
+                const ord = orders.find((o) => o.id === id);
+                if (!ord) return;
 
-                  <button
-                    type="button"
-                    className="underline text-gray-700 hover:text-gray-900"
-                    onClick={handleImportClick}
-                  >
-                    Importa CSV
-                  </button>
-
-                  <input
-                    ref={importInputRef}
-                    type="file"
-                    accept=".csv,text/csv"
-                    className="hidden"
-                    onChange={handleImportFile}
-                  />
-                </div>
-              )}
-
-              <OrderList
-                orders={filteredOrders}
-                search={search}
-                setSearch={setSearch}
-                operatorFilter={operatorFilter}
-                setOperatorFilter={setOperatorFilter}
-                operatorOptions={operatorOptions}
-                onEdit={handleEdit}
-                onView={handleView}
-                onDelete={handleDelete}
-                isAdmin={isAdmin}
-                onChangeStatus={async (id, stato) => {
-                  const ord = orders.find((o) => o.id === id);
-                  if (!ord) return;
-
-                  await updateOrder({ ...ord, stato });
-                  await load();
-                }}
-              />
-            </>
+                await updateOrder({ ...ord, stato });
+                await load();
+              }}
+            />
           )}
 
           {view === "form" && editing && (
@@ -514,7 +484,11 @@ export default function Orders({ user, onLogout }) {
           {view === "view" && viewing && (
             <OrderView
               order={viewing}
-              onClose={handleCloseView}
+              onClose={() => {
+                setView("list");
+                setViewing(null);
+                restoreScroll();
+              }}
               onChangeStatus={async (id, stato) => {
                 const ord = orders.find((o) => o.id === id);
                 if (!ord) return;

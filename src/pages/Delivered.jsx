@@ -6,8 +6,8 @@ import Footer from "../components/Footer";
 
 import { fetchOrders, updateOrder, deleteOrder } from "../utils/supabase";
 
-/** ✅ ELENCO OPERATORI FISSO (sempre visibile) */
-const OPERATORI = ["ambra", "salvo", "franco", "ignazio", "alessandro", "admin"];
+/** ✅ ELENCO LAVORATORI FISSO (sempre visibile) */
+const LAVORATORI = ["ambra", "salvo", "franco", "ignazio", "alessandro", "admin"];
 
 /** ===== SEARCH helpers ===== */
 const normalize = (value = "") =>
@@ -73,8 +73,7 @@ export default function Delivered({ user, onLogout }) {
   const [viewing, setViewing] = useState(null);
 
   const [search, setSearch] = useState("");
-
-  const [operatorFilter, setOperatorFilter] = useState("ALL");
+  const [workerFilter, setWorkerFilter] = useState("ALL");
 
   const lastScrollYRef = useRef(0);
 
@@ -95,10 +94,10 @@ export default function Delivered({ user, onLogout }) {
     load();
   }, []);
 
-  const operatorOptions = useMemo(() => {
+  const workerOptions = useMemo(() => {
     const map = new Map();
-    for (const op of OPERATORI) {
-      const label = String(op).trim();
+    for (const w of LAVORATORI) {
+      const label = String(w).trim();
       if (!label) continue;
       const key = normalize(label);
       if (!map.has(key)) map.set(key, label);
@@ -126,13 +125,13 @@ export default function Delivered({ user, onLogout }) {
 
       const textMatch = !q || text.includes(q);
 
-      const operatorMatch =
-        operatorFilter === "ALL" ||
-        normalize(o?.operatore) === normalize(operatorFilter);
+      const workerMatch =
+        workerFilter === "ALL" ||
+        normalize(o?.lavoratore) === normalize(workerFilter);
 
-      return textMatch && operatorMatch;
+      return textMatch && workerMatch;
     });
-  }, [orders, search, operatorFilter]);
+  }, [orders, search, workerFilter]);
 
   function restoreScroll() {
     requestAnimationFrame(() => {
@@ -185,9 +184,9 @@ export default function Delivered({ user, onLogout }) {
               orders={filteredOrders}
               search={search}
               setSearch={setSearch}
-              operatorFilter={operatorFilter}
-              setOperatorFilter={setOperatorFilter}
-              operatorOptions={operatorOptions}
+              workerFilter={workerFilter}
+              setWorkerFilter={setWorkerFilter}
+              workerOptions={workerOptions}
               onView={handleView}
               onDelete={handleDelete}
               isAdmin={isAdmin}

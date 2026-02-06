@@ -6,9 +6,10 @@ export default function OrderList({
   search = "",
   setSearch = () => {},
 
-  operatorFilter = "ALL",
-  setOperatorFilter = () => {},
-  operatorOptions = [],
+  // ✅ filtro lavoratore (solo UI)
+  workerFilter = "ALL",
+  setWorkerFilter = () => {},
+  workerOptions = [],
 
   onView,
   onEdit,
@@ -44,6 +45,7 @@ export default function OrderList({
 
   return (
     <div>
+      {/* 🔍 BARRA RICERCA + FILTRO LAVORATORE (sempre visibile) */}
       <div className="mb-4 flex flex-wrap gap-2">
         <input
           value={search}
@@ -53,15 +55,15 @@ export default function OrderList({
         />
 
         <select
-          value={operatorFilter}
-          onChange={(e) => setOperatorFilter(e.target.value)}
+          value={workerFilter}
+          onChange={(e) => setWorkerFilter(e.target.value)}
           className="p-2 border rounded min-w-[190px]"
-          title="Filtra per operatore"
+          title="Filtra per lavoratore"
         >
-          <option value="ALL">Tutti gli operatori</option>
-          {operatorOptions.map((op) => (
-            <option key={op} value={op}>
-              {op}
+          <option value="ALL">Tutti i lavoratori</option>
+          {workerOptions.map((w) => (
+            <option key={w} value={w}>
+              {w}
             </option>
           ))}
         </select>
@@ -69,7 +71,7 @@ export default function OrderList({
         <button
           onClick={() => {
             setSearch("");
-            setOperatorFilter("ALL");
+            setWorkerFilter("ALL");
           }}
           className="btn-small"
         >
@@ -79,7 +81,7 @@ export default function OrderList({
 
       {orders.length === 0 ? (
         <div className="py-6 text-center text-gray-500">
-          {search?.trim() || operatorFilter !== "ALL"
+          {search?.trim() || workerFilter !== "ALL"
             ? "Nessun ordine corrisponde ai filtri."
             : "Nessun ordine presente."}
         </div>
@@ -93,7 +95,7 @@ export default function OrderList({
               <div>
                 <div className="font-medium">{o.cliente || "-"}</div>
                 <div className="text-sm text-gray-600">
-                  Tel: {o.telefono || "-"} • Operatore: {o.operatore || "-"} • Consegna:{" "}
+                  Tel: {o.telefono || "-"} • Lavoratore: {o.lavoratore || "-"} • Consegna:{" "}
                   {o.consegna ? new Date(o.consegna).toLocaleDateString() : "-"}
                 </div>
               </div>
